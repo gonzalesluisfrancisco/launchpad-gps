@@ -1,0 +1,1 @@
+Default update rate for GPS is 1 Hz (at 9600 baud).  To increase the update rate, the baud rate must also be increased.
