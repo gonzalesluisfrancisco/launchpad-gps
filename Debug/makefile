@@ -7,6 +7,7 @@ CG_TOOL_ROOT := /opt/ti/ccsv6/tools/compiler/arm_5.1.6
 ORDERED_OBJS += \
 $(GEN_CMDS__FLAG) \
 "./main.obj" \
+"./parseNmea.obj" \
 "./tm4c1294ncpdt_startup_ccs.obj" \
 "/home/mitchellgrogg/code/arm-toolchain/tilib/driverlib/ccs/Debug/driverlib.lib" \
 "../tm4c1294ncpdt.cmd" \
@@ -140,8 +141,8 @@ launchpad-gps.hex: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(EXE_OUTPUTS__QUOTED)$(BIN_OUTPUTS__QUOTED)
-	-$(RM) "main.pp" "tm4c1294ncpdt_startup_ccs.pp" 
-	-$(RM) "main.obj" "tm4c1294ncpdt_startup_ccs.obj" 
+	-$(RM) "main.pp" "parseNmea.pp" "tm4c1294ncpdt_startup_ccs.pp" 
+	-$(RM) "main.obj" "parseNmea.obj" "tm4c1294ncpdt_startup_ccs.obj" 
 	-@echo 'Finished clean'
 	-@echo ' '
 
