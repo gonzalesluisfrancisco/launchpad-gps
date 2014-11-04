@@ -1,5 +1,7 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
+#include <stdio.h>
 #include "inc/hw_memmap.h"
 #include "inc/hw_types.h"
 #include "driverlib/gpio.h"
@@ -13,18 +15,52 @@ uint32_t ui32SysClkFreq;
 
 void UARTIntHandler(void) {
 	uint32_t ui32Status;
+	const char delimiter[2] = ",$";
+	bool gpmrcDone = false;
+	char sentence[508] = {};
+	char sentenceToParse[508] = {};
+	char parsedOutput[508] = {};
+	uint8_t i = 0;
+	char UARTreadChar[1] = {};
+	char *str, *delim, *currentParsed;
 
 	ui32Status = UARTIntStatus(UART7_BASE, true); //get interrupt status
-
 	UARTIntClear(UART7_BASE, ui32Status); //clear the asserted interrupts
 
 	//loop while there are chars
 	while(UARTCharsAvail(UART7_BASE)) {
-		//echo character to debug term
-		UARTCharPutNonBlocking(UART0_BASE, UARTCharGetNonBlocking(UART7_BASE));
+		//DEBUG UARTreadChar = UARTCharGetNonBlocking(UART7_BASE);
+		//DEBUG strcat(buildChar, UARTreadChar);
+		sprintf(UARTreadChar, "%c", UARTCharGetNonBlocking(UART7_BASE));
+		strcat(sentence, UARTreadChar);
 		// LEDs on
 		GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1, 0xFF);
 	}
+
+	delim = strdup(delimiter);
+	str = strdup(sentence);
+
+    currentParsed = strtok(sentenceToParse, "$");
+    while (gpmrcDone != true) {
+        currentParsed = strtok(NULL, "$");
+        currentParsed = strtok(NULL, ",");
+
+        if (strcmp(currentParsed,"GPRMC") == 0) {
+            for (i = 0; i < 12; i++) {
+                currentParsed = strtok(NULL, delimiter);
+				strcat(parsedOutput, currentParsed);
+            }
+            gpmrcDone = true;
+        }
+    }
+
+	//echo character to debug term
+	for (i = 0; i < strlen(parsedOutput); i++) {
+		//UARTCharPutNonBlocking(UART0_BASE, sentence[i]);
+		UARTCharPut(UART0_BASE, parsedOutput[i]);
+	}
+	// LEDs off
+	GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1, 0x00);
 }
 
 
@@ -60,6 +96,5 @@ int main(void) {
 	UARTIntEnable(UART7_BASE, UART_INT_RX | UART_INT_RT);
 
 	while (1) {
-
 	}
 }
