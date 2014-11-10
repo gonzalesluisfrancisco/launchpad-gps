@@ -1,2 +1,4 @@
 Default update rate for GPS is 1 Hz (at 9600 baud).  To increase the update rate, the baud rate must also be increased.
 TivaWareTM Utilities Library (${TIVAWARE}/utils) has other good libraries; notably uartstdio.h
+	- To use uartstdio functions, right click on project in project explorer and select "Add". Then find the file, for example uartstio.c.  Then select add as link with TIVAWARE_INSTALL as relative path.
+Increase Heap and Stack size.  I used 0x1000 for both.

@@ -11,60 +11,20 @@
 #include "inc/hw_ints.h"
 #include "driverlib/interrupt.h"
 
+/********************************************//**
+ *  Global Declarations
+ ***********************************************/
 uint32_t ui32SysClkFreq;
-
-void UARTIntHandler(void) {
-	uint32_t ui32Status;
-	const char delimiter[2] = ",$";
-	bool gpmrcDone = false;
-	char sentence[508] = {};
-	char sentenceToParse[508] = {};
-	char parsedOutput[508] = {};
-	uint8_t i = 0;
-	char UARTreadChar[1] = {};
-	char *str, *delim, *currentParsed;
-
-	ui32Status = UARTIntStatus(UART7_BASE, true); //get interrupt status
-	UARTIntClear(UART7_BASE, ui32Status); //clear the asserted interrupts
-
-	//loop while there are chars
-	while(UARTCharsAvail(UART7_BASE)) {
-		//DEBUG UARTreadChar = UARTCharGetNonBlocking(UART7_BASE);
-		//DEBUG strcat(buildChar, UARTreadChar);
-		sprintf(UARTreadChar, "%c", UARTCharGetNonBlocking(UART7_BASE));
-		strcat(sentence, UARTreadChar);
-		// LEDs on
-		GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1, 0xFF);
-	}
-
-	delim = strdup(delimiter);
-	str = strdup(sentence);
-
-    currentParsed = strtok(sentenceToParse, "$");
-    while (gpmrcDone != true) {
-        currentParsed = strtok(NULL, "$");
-        currentParsed = strtok(NULL, ",");
-
-        if (strcmp(currentParsed,"GPRMC") == 0) {
-            for (i = 0; i < 12; i++) {
-                currentParsed = strtok(NULL, delimiter);
-				strcat(parsedOutput, currentParsed);
-            }
-            gpmrcDone = true;
-        }
-    }
-
-	//echo character to debug term
-	for (i = 0; i < strlen(parsedOutput); i++) {
-		//UARTCharPutNonBlocking(UART0_BASE, sentence[i]);
-		UARTCharPut(UART0_BASE, parsedOutput[i]);
-	}
-	// LEDs off
-	GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1, 0x00);
-}
 
 
 int main(void) {
+	char UARTreadChar;
+	char idBuffer[7] = {};
+	char sentence[400] = {};
+	bool parsingId = false;
+	uint32_t i = 0;
+	uint32_t j = 0;
+
 	ui32SysClkFreq = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
 			SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
 			SYSCTL_CFG_VCO_480), 120000000);
@@ -91,10 +51,30 @@ int main(void) {
 	UARTConfigSetExpClk(UART7_BASE, ui32SysClkFreq, 9600,
 			(UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
 
-	IntMasterEnable();
-	IntEnable(INT_UART7);
-	UARTIntEnable(UART7_BASE, UART_INT_RX | UART_INT_RT);
-
 	while (1) {
+		if (UARTCharsAvail(UART7_BASE)) {
+			UARTreadChar = UARTCharGet(UART7_BASE);
+
+			if ((parsingId == false) && (UARTreadChar == '$')) {
+					i = 0;
+					parsingId = true;
+					i++;
+			}
+			else if ((parsingId == true) && (UARTreadChar == ',')) {
+					idBuffer[i] = NULL;
+					parsingId = false;
+					i++;
+					UARTCharPut(UART0_BASE, '\r');
+					UARTCharPut(UART0_BASE, '\n');
+			}
+			else if ((parsingId == true) && (UARTreadChar != ',')){
+				idBuffer[i] = UARTreadChar;
+			}
+
+			sentence[i] = UARTreadChar;
+			if (strlen(idBuffer) <= 6) {
+				UARTCharPut(UART0_BASE, idBuffer[i]);
+			}
+		}
 	}
 }

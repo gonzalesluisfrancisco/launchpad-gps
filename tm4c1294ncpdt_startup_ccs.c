@@ -41,7 +41,6 @@ static void IntDefaultHandler(void);
 //
 //*****************************************************************************
 extern void _c_int00(void);
-extern void UARTIntHandler(void);
 //*****************************************************************************
 //
 // Linker variable that marks the top of the stack.
@@ -143,7 +142,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // UART4 Rx and Tx
     IntDefaultHandler,                      // UART5 Rx and Tx
     IntDefaultHandler,                      // UART6 Rx and Tx
-    UARTIntHandler,                      // UART7 Rx and Tx
+    IntDefaultHandler,                      // UART7 Rx and Tx
     IntDefaultHandler,                      // I2C2 Master and Slave
     IntDefaultHandler,                      // I2C3 Master and Slave
     IntDefaultHandler,                      // Timer 4 subtimer A
