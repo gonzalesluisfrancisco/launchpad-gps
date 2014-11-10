@@ -10,7 +10,6 @@
 #include "driverlib/uart.h"
 #include "inc/hw_ints.h"
 #include "driverlib/interrupt.h"
-#include "utils/uartstdio.h"
 
 /********************************************//**
  *  Global Declarations
