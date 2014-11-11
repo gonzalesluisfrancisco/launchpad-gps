@@ -12,31 +12,31 @@ LIB_SRCS += \
 C_SRCS += \
 ../main.c \
 ../tm4c1294ncpdt_startup_ccs.c \
-/home/mitchellgrogg/code/arm-toolchain/tilib/utils/uartstdio.c 
+/home/mitchellgrogg/code/arm-toolchain/tilib/utils/ustdlib.c 
 
 OBJS += \
 ./main.obj \
 ./tm4c1294ncpdt_startup_ccs.obj \
-./uartstdio.obj 
+./ustdlib.obj 
 
 C_DEPS += \
 ./main.pp \
 ./tm4c1294ncpdt_startup_ccs.pp \
-./uartstdio.pp 
+./ustdlib.pp 
 
 C_DEPS__QUOTED += \
 "main.pp" \
 "tm4c1294ncpdt_startup_ccs.pp" \
-"uartstdio.pp" 
+"ustdlib.pp" 
 
 OBJS__QUOTED += \
 "main.obj" \
 "tm4c1294ncpdt_startup_ccs.obj" \
-"uartstdio.obj" 
+"ustdlib.obj" 
 
 C_SRCS__QUOTED += \
 "../main.c" \
 "../tm4c1294ncpdt_startup_ccs.c" \
-"/home/mitchellgrogg/code/arm-toolchain/tilib/utils/uartstdio.c" 
+"/home/mitchellgrogg/code/arm-toolchain/tilib/utils/ustdlib.c" 
 
 

@@ -8,7 +8,7 @@ ORDERED_OBJS += \
 $(GEN_CMDS__FLAG) \
 "./main.obj" \
 "./tm4c1294ncpdt_startup_ccs.obj" \
-"./uartstdio.obj" \
+"./ustdlib.obj" \
 "/home/mitchellgrogg/code/arm-toolchain/tilib/driverlib/ccs/Debug/driverlib.lib" \
 "../tm4c1294ncpdt.cmd" \
 -l"libc.a" \
@@ -141,8 +141,8 @@ launchpad-gps.hex: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(EXE_OUTPUTS__QUOTED)$(BIN_OUTPUTS__QUOTED)
-	-$(RM) "main.pp" "tm4c1294ncpdt_startup_ccs.pp" "uartstdio.pp" 
-	-$(RM) "main.obj" "tm4c1294ncpdt_startup_ccs.obj" "uartstdio.obj" 
+	-$(RM) "main.pp" "tm4c1294ncpdt_startup_ccs.pp" "ustdlib.pp" 
+	-$(RM) "main.obj" "tm4c1294ncpdt_startup_ccs.obj" "ustdlib.obj" 
 	-@echo 'Finished clean'
 	-@echo ' '
 
