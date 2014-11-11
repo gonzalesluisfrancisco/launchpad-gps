@@ -51,7 +51,7 @@ Checksum              |            |         | *2C
 
 #### String to Float Conversion
 
-A string to floating point conversion function, `ustrtof`, is included in ustdlib.h which is located in the Tivaware utils folder.  Add the ustdlib.c file to the project as a symbolic link to use these functions.
+A string to floating point conversion function, `ustrtof()`, is included in ustdlib.h which is located in the Tivaware utils folder.  Add the ustdlib.c file to the project as a symbolic link to use these functions.
 
 #### Coordinate Conversion
 
