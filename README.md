@@ -1,5 +1,7 @@
 #Tiva C Connected Launchpad GPS Data Logger
 
+[Demo Video on Youtube](http://youtu.be/Iqw6D-W27hI)
+
 ## GPS Module
 
 [Adafruit Ultimate GPS Breakout](https://www.adafruit.com/products/746)
