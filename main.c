@@ -30,7 +30,7 @@ uint32_t ui32SysClkFreq;
 	*  Local Variable Declarations
 	***********************************************/
 	float	latitude, longitude, speed, course;
-	char	timestamp[11], status[2], nsIndicator[2], ewIndicator[2], date[7];
+	char	*timestamp, *status, *nsIndicator, *ewIndicator, *date;
 
 	char	UARTreadChar;
 	char	idBuffer[7] = {};
@@ -43,7 +43,7 @@ uint32_t ui32SysClkFreq;
 	char 	clearTerminal[] = "\033[2J";
 	char	cursorTo_0_0[] = "\033[0;0H";
 	char	cursorTo_0_1[] = "\033[2;0H";
-	char	moveCursorDown[] = "\033[10B";
+	char	header[] = "Time\t\tLatitude\tLongitude\tCourse\t\tSpeed";
 
 	uint32_t	i = 0; // Sentence id chars
 	uint32_t	j = 0; // NMEA sentence pointer
@@ -117,46 +117,52 @@ uint32_t ui32SysClkFreq;
 			else if ((readingData == true) && (UARTreadChar == '\r')){
 				sentence[j][k] = '\0';
 
-				// Read all the data into correctly typed vars
-				// Strings
-				ustrncpy(timestamp, sentence[0], strlen(timestamp));
-				ustrncpy(status, sentence[1], strlen(status));
-				ustrncpy(nsIndicator, sentence[3], strlen(nsIndicator));
-				ustrncpy(ewIndicator, sentence[5], strlen(ewIndicator));
-				ustrncpy(date, sentence[8], strlen(date));
+				// Get status of satellite fix. A=Fix. Display error message if none.
+				status = strdup(sentence[1]);
+				if (strcmp(status, "A") == 0) {
+					// Read all the data into correctly typed vars
+					// Strings
+					timestamp = strdup(sentence[0]);
+					nsIndicator = strdup(sentence[3]);
+					ewIndicator = strdup(sentence[5]);
+					date = strdup(sentence[8]);
 
-				// Floats
-				if (strcmp(nsIndicator, "S") == 0) {
-					latitude = -1 * ustrtof(sentence[2], NULL);
+					// Floats
+					if (strcmp(nsIndicator, "S") == 0) {
+						latitude = -1 * ustrtof(sentence[2], NULL);
+					}
+					else {
+						latitude = ustrtof(sentence[2], NULL);
+					}
+
+					if (strcmp(ewIndicator, "W") == 0) {
+						longitude = -1 * ustrtof(sentence[4], NULL);
+					}
+					else {
+						longitude = ustrtof(sentence[4], NULL);
+					}
+					// Convert speed from knots to mph
+					speed = 1.15078 * ustrtof(sentence[6], NULL);
+					course = ustrtof(sentence[7], NULL);
+
+					// Set up cursor/spacing/header
+					printStringToTerminal(clearTerminal,0);
+					printStringToTerminal(cursorTo_0_0, 0);
+					printStringToTerminal(header, 0);
+					printStringToTerminal(cursorTo_0_1, 0);
+
+					// Print values to the terminal
+					printStringToTerminal(timestamp, 1);
+					printFloatToTerminal(latitude, 1);
+					printFloatToTerminal(longitude, 1);
+					printFloatToTerminal(course, 1);
+					printFloatToTerminal(speed, 2);
 				}
 				else {
-					latitude = ustrtof(sentence[2], NULL);
+					char noFixString[] = "No data available";
+					printStringToTerminal(header, 2);
+					printStringToTerminal(noFixString, 2);
 				}
-
-				if (strcmp(nsIndicator, "W") == 0) {
-					longitude = -1 * ustrtof(sentence[4], NULL);
-				}
-				else {
-					longitude = ustrtof(sentence[4], NULL);
-				}
-				speed = ustrtof(sentence[6], NULL);
-				course = ustrtof(sentence[7], NULL);
-
-				char header[] = "Time\tLatitude\tLongitude\tCourse\tSpeed";
-
-				// Set up cursor/spacing
-				printStringToTerminal(clearTerminal,0);
-				printStringToTerminal(cursorTo_0_0, 0);
-				printStringToTerminal(header, 0);
-				printStringToTerminal(cursorTo_0_1, 0);
-
-				// Print values to the terminal
-				//printStringToTerminal(timestamp, 1);
-				printFloatToTerminal(latitude, 1);
-				printFloatToTerminal(longitude, 1);
-				printFloatToTerminal(course, 1);
-				printFloatToTerminal(speed, 2);
-
 			}
 			else if ((readingData == true) && (UARTreadChar != ',')){
 				sentence[j][k] = UARTreadChar;
