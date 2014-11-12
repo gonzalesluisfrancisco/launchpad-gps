@@ -24,22 +24,31 @@ int printFloatToTerminal(float floatToPrint, int delimiter);
 uint32_t ui32SysClkFreq;
 
 
-int main(void) {
+	int main(void) {
 
 	/********************************************//**
 	*  Local Variable Declarations
 	***********************************************/
-	float	timestamp, latitude, longitude, speed, course;
-	char	status[2], nsIndicator[2], ewIndicator[2], date[7];
+	float	latitude, longitude, speed, course;
+	char	timestamp[11], status[2], nsIndicator[2], ewIndicator[2], date[7];
 
 	char	UARTreadChar;
 	char	idBuffer[7] = {};
 	char	sentence[15][20] = {};
 	bool	parsingId = false;
 	bool	readingData = false;
+
+	// UART terminal movement (ANSI/VT100 Terminal Control Escape Sequences)
+	// Adopted from the following: http://goo.gl/s43voj
+	char 	clearTerminal[] = "\033[2J";
+	char	cursorTo_0_0[] = "\033[0;0H";
+	char	cursorTo_0_1[] = "\033[2;0H";
+	char	moveCursorDown[] = "\033[10B";
+
 	uint32_t	i = 0; // Sentence id chars
 	uint32_t	j = 0; // NMEA sentence pointer
 	uint32_t	k = 0; // NMEA chars
+
 
 	/********************************************//**
 	*  Port and Clock Configurations
@@ -79,7 +88,7 @@ int main(void) {
 
 	while (1) {
 		if (UARTCharsAvail(UART7_BASE)) {
-			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1, 0xFF);
+			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1, 0);
 			UARTreadChar = UARTCharGet(UART7_BASE);
 
 			if ((parsingId == false) && (UARTreadChar == '$')) {
@@ -94,6 +103,7 @@ int main(void) {
 
 				if (strcmp(idBuffer, "GPRMC") == 0) {
 					j = 0;
+					k = 0;
 					readingData = true;
 				}
 				else {
@@ -108,17 +118,14 @@ int main(void) {
 				sentence[j][k] = '\0';
 
 				// Read all the data into correctly typed vars
-
 				// Strings
-				strcpy(status, sentence[1]);
-				strcpy(nsIndicator, sentence[3]);
-				strcpy(ewIndicator, sentence[5]);
-				strcpy(date, sentence[8]);
-
+				ustrncpy(timestamp, sentence[0], strlen(timestamp));
+				ustrncpy(status, sentence[1], strlen(status));
+				ustrncpy(nsIndicator, sentence[3], strlen(nsIndicator));
+				ustrncpy(ewIndicator, sentence[5], strlen(ewIndicator));
+				ustrncpy(date, sentence[8], strlen(date));
 
 				// Floats
-				timestamp = ustrtof(sentence[0], NULL);
-
 				if (strcmp(nsIndicator, "S") == 0) {
 					latitude = -1 * ustrtof(sentence[2], NULL);
 				}
@@ -135,10 +142,21 @@ int main(void) {
 				speed = ustrtof(sentence[6], NULL);
 				course = ustrtof(sentence[7], NULL);
 
-				printFloatToTerminal(course, 0);
+				char header[] = "Time\tLatitude\tLongitude\tCourse\tSpeed";
 
-				//UARTCharPut(UART0_BASE, '\r');
-				//UARTCharPut(UART0_BASE, '\n');
+				// Set up cursor/spacing
+				printStringToTerminal(clearTerminal,0);
+				printStringToTerminal(cursorTo_0_0, 0);
+				printStringToTerminal(header, 0);
+				printStringToTerminal(cursorTo_0_1, 0);
+
+				// Print values to the terminal
+				//printStringToTerminal(timestamp, 1);
+				printFloatToTerminal(latitude, 1);
+				printFloatToTerminal(longitude, 1);
+				printFloatToTerminal(course, 1);
+				printFloatToTerminal(speed, 2);
+
 			}
 			else if ((readingData == true) && (UARTreadChar != ',')){
 				sentence[j][k] = UARTreadChar;
@@ -149,8 +167,8 @@ int main(void) {
 				j++;
 				k = 0;
 			}
-			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1, 0);
 		} // End if chars available
+		GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1, 0xFF);
 	}
 }
 
@@ -160,21 +178,23 @@ int main(void) {
 //! Prints the string passed to the terminal
 //!
 //! \param stringToPrint points to the string to print.
-//! \param delimiter denotes delimiter type. 0=tab, 1=newline
+//! \param delimiter denotes delimiter type. 0=none, 1=tab, 2=newline
 //
 //*****************************************************************************
 int printStringToTerminal(char *stringToPrint, int delimiter) {
-	uint8_t i = 0;;
+	uint8_t i = 0;
 	while (stringToPrint[i] != '\0') {
 		UARTCharPut(UART0_BASE, stringToPrint[i++]);
-		//i++;
 	}
-	if (delimiter == 0) {
+
+	if (delimiter == 1) {
 		UARTCharPut(UART0_BASE, '\t');
 	}
-	else {
+	else if (delimiter == 2) {
+		UARTCharPut(UART0_BASE, '\r');
 		UARTCharPut(UART0_BASE, '\n');
 	}
+
 	return 0;
 } // End function printStringToTerminal
 
@@ -184,7 +204,7 @@ int printStringToTerminal(char *stringToPrint, int delimiter) {
 //! Prints the number passed to the terminal
 //!
 //! \param floatToPrint points to the string to print.
-//! \param delimiter denotes delimiter type. 0=tab, 1=newline
+//! \param delimiter denotes delimiter type. 0=none, 1=tab, 2=newline
 //
 //*****************************************************************************
 int printFloatToTerminal(float floatToPrint, int delimiter) {
@@ -195,11 +215,14 @@ int printFloatToTerminal(float floatToPrint, int delimiter) {
 	while (stringToPrint[i] != '\0') {
 		UARTCharPut(UART0_BASE, stringToPrint[i++]);
 	}
-	if (delimiter == 0) {
+
+	if (delimiter == 1) {
 		UARTCharPut(UART0_BASE, '\t');
 	}
-	else {
+	else if (delimiter == 2) {
+		UARTCharPut(UART0_BASE, '\r');
 		UARTCharPut(UART0_BASE, '\n');
 	}
+
 	return 0;
 } // End function printFloatToTerminal
