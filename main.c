@@ -13,23 +13,24 @@
 #include "inc/hw_ints.h"
 #include "driverlib/interrupt.h"
 
-/********************************************//**
- *  Function Definitions
- ***********************************************/
+//**********************************
+//! Function Definitions
+ //**********************************
 int printStringToTerminal(char *stringToPrint, int delimiter);
 int printFloatToTerminal(float floatToPrint, int delimiter);
 
-/********************************************//**
- *  Global Declarations
- ***********************************************/
+
+//**********************************
+//! Global Declarations
+//**********************************
 uint32_t ui32SysClkFreq;
 
 
 int main(void) {
 
-	/********************************************//**
-	 *  Local Variable Declarations
-	 ***********************************************/
+	//**********************************
+	//! Local Variable Declarations
+	//**********************************
 	float	latitude, longitude, speed, course;
 
 	char	UARTreadChar;
@@ -38,21 +39,14 @@ int main(void) {
 	bool	parsingId = false;
 	bool	readingData = false;
 
-	// UART terminal movement (ANSI/VT100 Terminal Control Escape Sequences)
-	// Adopted from the following: http://goo.gl/s43voj
-	char 	clearTerminal[] = "\033[2J";
-	char	cursorTo_0_0[] = "\033[0;0H";
-	char	cursorTo_0_1[] = "\033[2;0H";
-	char	header[] = "Time\t\tLatitude\tLongitude\tCourse\t\tSpeed";
-
 	uint32_t	i = 0; // Sentence id chars
 	uint32_t	j = 0; // NMEA sentence pointer
 	uint32_t	k = 0; // NMEA chars
 
 
-	/********************************************//**
-	 *  Port and Clock Configurations
-	 ***********************************************/
+	//**********************************
+	//! I/O config and setup
+	//**********************************
 
 	ui32SysClkFreq = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
 			SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
@@ -82,9 +76,9 @@ int main(void) {
 			(UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
 
 
-	/********************************************//**
-	 *  Main loop
-	 ***********************************************/
+	//**********************************
+	//! While forever
+	//**********************************
 
 	while (1) {
 		if (UARTCharsAvail(UART7_BASE)) {
@@ -145,16 +139,30 @@ int main(void) {
 				printStringToTerminal(timestamp, 2); //DEBUG
 
 
-				// Set up cursor/spacing/header
-				printStringToTerminal(clearTerminal,0);
-				printStringToTerminal(cursorTo_0_0, 0);
-				printStringToTerminal(header, 0);
-				printStringToTerminal(cursorTo_0_1, 0);
+				//****************************************************
+				//! Data Debug/Display UART terminal movement
+				//!
+				//! (ANSI/VT100 Terminal Control Escape Sequences)
+				//! Adapted from the following: http://goo.gl/s43voj
+				//****************************************************
+
+				// Initial terminal setup
+				// Clear Terminal
+				printStringToTerminal("\033[2J",0);
+				//Cursor to 0,0
+				printStringToTerminal("\033[0;0H", 0);
+				printStringToTerminal("Time (UTC)", 0);
+				//Cursor to 0,1
+				printStringToTerminal("\033[2;0H", 0);
 
 				// Print values to the terminal
-				printStringToTerminal(timestamp, 1);
+				printStringToTerminal(timestamp, 2);
+				printStringToTerminal("\r\n", 0);
+				printStringToTerminal("Latitude\tLongitude", 2);
 				printFloatToTerminal(latitude, 1);
-				printFloatToTerminal(longitude, 1);
+				printFloatToTerminal(longitude, 2);
+				printStringToTerminal("\r\n", 0);
+				printStringToTerminal("Course\t\tSpeed (MPH)", 2);
 				printFloatToTerminal(course, 1);
 				printFloatToTerminal(speed, 2);
 
@@ -175,7 +183,7 @@ int main(void) {
 				k = 0;
 			}
 		} // End if chars available
-		GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1, 0xFF);
+		GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1, 0x01);
 	}
 }
 
