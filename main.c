@@ -25,11 +25,11 @@ int printFloatToTerminal(float floatToPrint, int delimiter);
 uint32_t ui32SysClkFreq;
 
 
-	int main(void) {
+int main(void) {
 
 	/********************************************//**
-	*  Local Variable Declarations
-	***********************************************/
+	 *  Local Variable Declarations
+	 ***********************************************/
 	float	latitude, longitude, speed, course;
 
 	char	UARTreadChar;
@@ -51,8 +51,8 @@ uint32_t ui32SysClkFreq;
 
 
 	/********************************************//**
-	*  Port and Clock Configurations
-	***********************************************/
+	 *  Port and Clock Configurations
+	 ***********************************************/
 
 	ui32SysClkFreq = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
 			SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
@@ -83,8 +83,8 @@ uint32_t ui32SysClkFreq;
 
 
 	/********************************************//**
-	*  Main loop
-	***********************************************/
+	 *  Main loop
+	 ***********************************************/
 
 	while (1) {
 		if (UARTCharsAvail(UART7_BASE)) {
