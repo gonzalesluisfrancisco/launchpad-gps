@@ -6,7 +6,9 @@ CG_TOOL_ROOT := /opt/ti/ccsv6/tools/compiler/arm_5.1.6
 
 ORDERED_OBJS += \
 $(GEN_CMDS__FLAG) \
+"./ff.obj" \
 "./main.obj" \
+"./mmc-ek-tm4c1294xl.obj" \
 "./tm4c1294ncpdt_startup_ccs.obj" \
 "./ustdlib.obj" \
 "/home/mitchellgrogg/code/arm-toolchain/tilib/driverlib/ccs/Debug/driverlib.lib" \
@@ -141,8 +143,8 @@ launchpad-gps.hex: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(EXE_OUTPUTS__QUOTED)$(BIN_OUTPUTS__QUOTED)
-	-$(RM) "main.pp" "tm4c1294ncpdt_startup_ccs.pp" "ustdlib.pp" 
-	-$(RM) "main.obj" "tm4c1294ncpdt_startup_ccs.obj" "ustdlib.obj" 
+	-$(RM) "ff.pp" "main.pp" "mmc-ek-tm4c1294xl.pp" "tm4c1294ncpdt_startup_ccs.pp" "ustdlib.pp" 
+	-$(RM) "ff.obj" "main.obj" "mmc-ek-tm4c1294xl.obj" "tm4c1294ncpdt_startup_ccs.obj" "ustdlib.obj" 
 	-@echo 'Finished clean'
 	-@echo ' '
 

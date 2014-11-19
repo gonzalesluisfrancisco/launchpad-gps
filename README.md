@@ -52,7 +52,7 @@ Checksum              |            |         | *2C
 &lt;CR&gt; &lt;LF&gt; |            |         | End of message termination
 
 #### String to Float Conversion
-Call during config `FPUEnable()` and `FPULazyStackingEnable()` to enable floating-point operations.
+Call `FPUEnable()` and `FPULazyStackingEnable()` during config to enable floating-point operations.
 
 A string to floating point conversion function, `ustrtof()`, is included in ustdlib.h which is located in the Tivaware utils folder.  Add the ustdlib.c file to the project as a symbolic link to use these functions.
 
@@ -78,9 +78,12 @@ X1-52         | PD2          | CS
 Tivaware makes use of the [FatFs](http://elm-chan.org/fsw/ff/00index_e.html) Generic FAT File System Module library and is included in ${TIVAWARE_INSTALL}/third_party/fatfs which contains a port to the Tiva C Connected Launchpad located at port/mmc-ek-tm4c1294xl.c. The functions required for SD access are defined per the [FatFs Application Notes](http://elm-chan.org/fsw/ff/en/appnote.html).  An example program for the dk-tm4c129x located at `${TIVAWARE_INSTALL}/examples/boards/dk-tm4c129x/sd_card/dk-tm4c129x` development board was used in adapting the code for the project.
 
 1. Add the required header files `#include "third_party/src/fatfs/ff.h"` and `#include "third_party/fatfs/src/diskio.h"`.
-2. Link `${TIVAWARE_INSTALL}/third_party/fatfs/src/ff.c`
-3. Link the ported FatFs file `${TIVAWARE_INSTALL}/third_party/fatfs/port/mmc-ek-tm4c1294xl.c`
+2. Add new file as a symbolic link: `${TIVAWARE_INSTALL}/third_party/fatfs/src/ff.c`
+3. Import the ported FatFs file for the TM4C1294XL board`${TIVAWARE_INSTALL}/third_party/fatfs/port/mmc-ek-tm4c1294xl.c`
     * In this file, define the MCU that is being used for use by the ROM functions included in the file with `#define TARGET_IS_TM4C129_RA1` or `#define TARGET_IS_TM4C129_RA0`. Check the SYSCTL_DID0_MIN register to determine which to use.
     * Ensure that the main.c setup setup defines the clock frequency as `g_ui32SysClock` for use by this file.
     * Edit the peripheral and GPIO definitions as needed to match the hardware connections being used.
 4. Add `extern void SysTickHandler(void);` to *startup_ccs.c in External declarations section. Add `SysTickHandler` to the interrupt vector table on the line labeled `// The SysTick handler`.
+
+
+#### Debugging

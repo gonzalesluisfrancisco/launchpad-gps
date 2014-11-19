@@ -9,46 +9,66 @@
 #include "driverlib/gpio.h"
 #include "driverlib/pin_map.h"
 #include "driverlib/sysctl.h"
+#include "driverlib/systick.h"
 #include "driverlib/uart.h"
+#include "driverlib/fpu.h"
 #include "inc/hw_ints.h"
 #include "driverlib/interrupt.h"
+#include "third_party/fatfs/src/ff.h"
+#include "third_party/fatfs/src/diskio.h"
 
 //**********************************
 //! Function Definitions
  //**********************************
 int printStringToTerminal(char *stringToPrint, int delimiter);
 int printFloatToTerminal(float floatToPrint, int delimiter);
+static const char *StringFromFResult(FRESULT iFResult);       // For Debug
+int logToSD(char *inTimestamp, char *inDate, float inLatitude, float inLongitude, float inSpeed, float inCourse);
 
+//*****************************************************************************
+//! Global Definitions
+//*****************************************************************************
 
-//**********************************
-//! Global Declarations
-//**********************************
-uint32_t ui32SysClkFreq;
+//*****************************************************************************
+//
+// The following are data structures used by FatFs.
+//
+//*****************************************************************************
+static FATFS g_sFatFs;
+static DIR g_sDirObject;
+static FILINFO g_sFileInfo;
+static FIL g_sFileObject;
+
+//*****************************************************************************
+//
+// The system clock frequency in Hz.
+//
+//*****************************************************************************
+uint32_t g_ui32SysClock;
 
 
 int main(void) {
 
-	//**********************************
-	//! Local Variable Declarations
-	//**********************************
+	//*************************************************************************
+	//
+	// Local variable definitions
+	//
+	//*************************************************************************
 	float	latitude, longitude, speed, course;
-
 	char	UARTreadChar;
 	char	idBuffer[7] = {};
-	char	sentence[15][20] = {};
+	char	sentence[10][20] = {};
 	bool	parsingId = false;
 	bool	readingData = false;
-
 	uint32_t	i = 0; // Sentence id chars
 	uint32_t	j = 0; // NMEA sentence pointer
 	uint32_t	k = 0; // NMEA chars
 
-
-	//**********************************
+	//*************************************************************************
 	//! I/O config and setup
-	//**********************************
+	//*************************************************************************
 
-	ui32SysClkFreq = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
+	g_ui32SysClock = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
 			SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
 			SYSCTL_CFG_VCO_480), 120000000);
 
@@ -56,6 +76,10 @@ int main(void) {
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART7);
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOC);
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI2);
+
 
 	GPIOPinConfigure(GPIO_PA0_U0RX);
 	GPIOPinConfigure(GPIO_PC4_U7RX);
@@ -63,26 +87,39 @@ int main(void) {
 	GPIOPinConfigure(GPIO_PC5_U7TX);
 	GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 	GPIOPinTypeUART(GPIO_PORTC_BASE, GPIO_PIN_4 | GPIO_PIN_5);
-
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
 	GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1);
 
+	GPIOPinConfigure(GPIO_PD0_SSI2XDAT1);
+	GPIOPinConfigure(GPIO_PD1_SSI2XDAT0);
+	GPIOPinConfigure(GPIO_PD2_SSI2FSS);
+	GPIOPinConfigure(GPIO_PD3_SSI2CLK);
+
 	// Debug UART output config
-	UARTConfigSetExpClk(UART0_BASE, ui32SysClkFreq, 115200,
+	UARTConfigSetExpClk(UART0_BASE, g_ui32SysClock, 115200,
 			(UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
 
 	// GPS UART input config
-	UARTConfigSetExpClk(UART7_BASE, ui32SysClkFreq, 9600,
+	UARTConfigSetExpClk(UART7_BASE, g_ui32SysClock, 9600,
 			(UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
 
+	//
+	// Configure SysTick for a 100Hz interrupt.
+	// From example
+	SysTickPeriodSet(g_ui32SysClock / 100);
+	SysTickIntEnable();
+	SysTickEnable();
+
+	FPUEnable();
+	FPULazyStackingEnable();
 
 	//**********************************
 	//! While forever
 	//**********************************
 
 	while (1) {
+		GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
 		if (UARTCharsAvail(UART7_BASE)) {
-			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1, 0);
+			//GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0);
 			UARTreadChar = UARTCharGet(UART7_BASE);
 
 			if ((parsingId == false) && (UARTreadChar == '$')) {
@@ -136,16 +173,13 @@ int main(void) {
 				speed = 1.15078 * ustrtof(sentence[6], NULL);
 				course = ustrtof(sentence[7], NULL);
 
-				printStringToTerminal(timestamp, 2); //DEBUG
-
-
 				//****************************************************
 				//! Data Debug/Display UART terminal movement
 				//!
 				//! (ANSI/VT100 Terminal Control Escape Sequences)
 				//! Adapted from the following: http://goo.gl/s43voj
 				//****************************************************
-
+/*DEBUG
 				// Initial terminal setup
 				// Clear Terminal
 				printStringToTerminal("\033[2J",0);
@@ -165,6 +199,8 @@ int main(void) {
 				printStringToTerminal("Course\t\tSpeed (MPH)", 2);
 				printFloatToTerminal(course, 1);
 				printFloatToTerminal(speed, 2);
+DEBUG*/
+				logToSD(timestamp, date, latitude, longitude, speed, course);
 
 				// Deallocate memory used by strdup function
 				free(timestamp);
@@ -183,7 +219,7 @@ int main(void) {
 				k = 0;
 			}
 		} // End if chars available
-		GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1, 0x01);
+		//GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1, 0xFF);
 	}
 }
 
@@ -241,3 +277,80 @@ int printFloatToTerminal(float floatToPrint, int delimiter) {
 
 	return 0;
 } // End function printFloatToTerminal
+
+
+//*****************************************************************************
+//
+// This logs the data to the SD card
+//
+//*****************************************************************************
+
+int logToSD(char *inTimestamp, char *inDate, float inLatitude, float inLongitude, float inSpeed, float inCourse) {
+	FRESULT iFResult;   // File function return code
+	UINT 	bw;         // amount of bytes written to SD
+	char data[6][30] = {};
+	char logOutputString[100] = {};
+	uint8_t i = 0;
+	uint8_t j = 0;
+	uint8_t k = 0;
+
+	strcpy(data[0], inTimestamp);
+	strcpy(data[1], inDate);
+	sprintf(data[2], "%f", inLatitude);
+	sprintf(data[3], "%f", inLongitude);
+	sprintf(data[4], "%f", inSpeed);
+	sprintf(data[5], "%f", inCourse);
+
+	for (i = 0; i < 6; i++) {
+	    j = 0;
+		while (data[i][j] != '\0') {
+			logOutputString[k++] = data[i][j++];
+		}
+		if (i != 5) {
+			logOutputString[k++] = '\t';
+		}
+		else {
+			logOutputString[k] = '\n';
+			logOutputString[k + 1] = '\0';
+		}
+	}
+
+	// DEBUG - uncomment if needed
+	//   Prints the string to be written to the SD card to the terminal
+	// printStringToTerminal(logOutputString, 0);
+
+    //
+    // Mount the file system, using logical disk 0 and write to SD card
+    //
+	iFResult = f_mount(0, &g_sFatFs);
+    if (iFResult != FR_OK) {
+    	//UARTCharPut(UART0_BASE, 'N');
+    }
+    else {
+    	//UARTCharPut(UART0_BASE, 'Y');
+    	f_open(&g_sFileObject, "/gps_log.txt", FA_WRITE | FA_OPEN_ALWAYS);
+    	f_lseek(&g_sFileObject, f_size(&g_sFileObject));
+    	f_write(&g_sFileObject, logOutputString, ustrlen(logOutputString), &bw);
+    	f_close(&g_sFileObject);
+		if (bw == ustrlen(logOutputString)) {
+			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
+		}
+    }
+    f_mount(0, NULL);
+
+    return 0;
+}
+
+
+//*****************************************************************************
+//
+// This is the handler for this SysTick interrupt.  FatFs requires a timer tick
+// every 10 ms for internal timing purposes.
+//
+//*****************************************************************************
+void SysTickHandler(void) {
+    //
+    // Call the FatFs tick timer.
+    //
+    disk_timerproc();
+}

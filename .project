@@ -31,6 +31,11 @@
 			<locationURI>TIVAWARE_INSTALL/driverlib/ccs/Debug/driverlib.lib</locationURI>
 		</link>
 		<link>
+			<name>ff.c</name>
+			<type>1</type>
+			<locationURI>TIVAWARE_INSTALL/third_party/fatfs/src/ff.c</locationURI>
+		</link>
+		<link>
 			<name>ustdlib.c</name>
 			<type>1</type>
 			<locationURI>TIVAWARE_INSTALL/utils/ustdlib.c</locationURI>
