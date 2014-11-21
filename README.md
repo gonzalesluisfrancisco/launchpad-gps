@@ -61,6 +61,7 @@ A string to floating point conversion function, `ustrtof()`, is included in ustd
 The latitude and longitude are formatted as degrees and minutes (ddmm.mmmm). However, many popular mapping utilities such as Google Maps do not support this format. The following formula can be used to convert to decimal format either during the logging or when the data is uploaded to another source for analysis computer.
 
 dd = degrees
+
 mm.mmmm = minutes
 
 decimal = dd + (mm.mmmm/60)
