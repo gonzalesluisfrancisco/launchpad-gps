@@ -80,7 +80,7 @@ Tivaware makes use of the [FatFs](http://elm-chan.org/fsw/ff/00index_e.html) Gen
 
 1. Add the required header files `#include "third_party/src/fatfs/ff.h"` and `#include "third_party/fatfs/src/diskio.h"`.
 2. Add new file as a symbolic link: `${TIVAWARE_INSTALL}/third_party/fatfs/src/ff.c`
-3. Import the ported FatFs file for the TM4C1294XL board`${TIVAWARE_INSTALL}/third_party/fatfs/port/mmc-ek-tm4c1294xl.c`
+3. Import the ported FatFs file for the TM4C1294XL board `${TIVAWARE_INSTALL}/third_party/fatfs/port/mmc-ek-tm4c1294xl.c`
     * In this file, define the MCU that is being used for use by the ROM functions included in the file with `#define TARGET_IS_TM4C129_RA1` or `#define TARGET_IS_TM4C129_RA0`. Check the SYSCTL_DID0_MIN register to determine which to use.
     * Ensure that the main.c setup setup defines the clock frequency as `g_ui32SysClock` for use by this file.
     * Edit the peripheral and GPIO definitions as needed to match the hardware connections being used.
@@ -95,6 +95,7 @@ If the program is not functioning as designed, pause the debugger. If a hard fau
 TI has a helpful guide, [Diagnosing Software Faults in Stellaris Microcontrollers](http://www.ti.com/lit/an/spma043/spma043.pdf), which details various methods to debug if a hard fault occurs. In my case, I had overlooked a step in the initialization of a GPIO port. Using the method taken from the debugging guide, I was able to determine the specific port that was causing the hard fault in order to fix the problem. To be alerted whenever a hard fault occurs, add breakpoints in the `while(1)` loops of the default fault handlers.
 
 Method 1
+
 1. Use the debugger to examine the NVIC_FAULT_STAT register to find the type of fault and the status bits that indicate the specific cause.
 2. If there is a valid fault address register (FAULTADDR or MMADR), then read that to find the faulting address.
 3. Study the memory map in the Stellaris data sheet to find a clue about the cause of the fault. Often the address is in the register space of a peripheral.
