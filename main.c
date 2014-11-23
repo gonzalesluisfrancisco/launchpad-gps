@@ -93,7 +93,7 @@ int main(void) {
 	GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 	GPIOPinTypeUART(GPIO_PORTC_BASE, GPIO_PIN_4 | GPIO_PIN_5);
 
-	GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1);
+	GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
 	GPIOPinConfigure(GPIO_PD0_SSI2XDAT1);
 	GPIOPinConfigure(GPIO_PD1_SSI2XDAT0);
@@ -118,15 +118,14 @@ int main(void) {
 	FPUEnable();
 	FPULazyStackingEnable();
 
-	GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1, 0x00);
-
 	//**********************************
 	//! While forever
 	//**********************************
 
 	while (1) {
+		GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1, 0x00);
 		if (UARTCharsAvail(UART7_BASE)) {
-			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0x00);
+			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0xFF);
 			UARTreadChar = UARTCharGet(UART7_BASE);
 
 			if ((parsingId == false) && (UARTreadChar == '$')) {
@@ -190,12 +189,11 @@ int main(void) {
 				// Initial terminal setup
 				// Clear Terminal
 				printStringToTerminal("\033[2J",0);
-				//Cursor to 0,0
+				// Cursor to 0,0
 				printStringToTerminal("\033[0;0H", 0);
 				printStringToTerminal("Time (UTC)", 0);
 				//Cursor to 0,1
 				printStringToTerminal("\033[2;0H", 0);
-
 				// Print values to the terminal
 				printStringToTerminal(timestamp, 2);
 				printStringToTerminal("\r\n", 0);
@@ -225,7 +223,6 @@ int main(void) {
 				j++;
 				k = 0;
 			}
-		GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0xFF);
 		} // End if chars available
 	}
 }
@@ -307,6 +304,8 @@ int logToSD(char *inTimestamp, char *inDate, float inLatitude, float inLongitude
 	sprintf(data[3], "%f", inLongitude);
 	sprintf(data[4], "%f", inSpeed);
 	sprintf(data[5], "%f", inCourse);
+
+	GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0xFF);
 
 	//
 	// Create a tab delimited string to write to SD card.
