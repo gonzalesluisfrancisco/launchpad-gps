@@ -58,7 +58,7 @@ A string to floating point conversion function, `ustrtof()`, is included in ustd
 
 #### Coordinate Conversion
 
-The latitude and longitude are formatted as degrees and minutes (ddmm.mmmm). However, many popular mapping utilities such as Google Maps do not support this format. The following formula can be used to convert to decimal format either during the logging or when the data is uploaded to another source for analysis computer.
+The latitude and longitude are formatted as degrees and minutes (ddmm.mmmm). However, many popular mapping utilities such as Google Maps do not support this format. This can be rectified by adding a space between dd and mm (ie dd mm.mmmm) or using a conversion formula. The following formula can be used to convert to decimal format either during the logging or when the data is uploaded to another source for analysis computer.
 
 dd = degrees
 
@@ -87,4 +87,15 @@ Tivaware makes use of the [FatFs](http://elm-chan.org/fsw/ff/00index_e.html) Gen
 4. Add `extern void SysTickHandler(void);` to *startup_ccs.c in External declarations section. Add `SysTickHandler` to the interrupt vector table on the line labeled `// The SysTick handler`.
 
 
-#### Debugging
+#### Lessons Learned
+
+#### Debugging Hard Faults
+If the program is not functioning as designed, pause the debugger. If a hard fault has occurred, the program will be stuck spinning in endless loop of the `FaultISR(void)` function located in the startup file, which contains default fault handlers, interrupt declarations, and vector table.
+
+TI has a helpful guide, [Diagnosing Software Faults in Stellaris Microcontrollers](http://www.ti.com/lit/an/spma043/spma043.pdf), which details various methods to debug if a hard fault occurs. In my case, I had overlooked a step in the initialization of a GPIO port. Using the method taken from the debugging guide, I was able to determine the specific port that was causing the hard fault in order to fix the problem. To be alerted whenever a hard fault occurs, add breakpoints in the `while(1)` loops of the default fault handlers.
+
+Method 1
+1. Use the debugger to examine the NVIC_FAULT_STAT register to find the type of fault and the status bits that indicate the specific cause.
+2. If there is a valid fault address register (FAULTADDR or MMADR), then read that to find the faulting address.
+3. Study the memory map in the Stellaris data sheet to find a clue about the cause of the fault. Often the address is in the register space of a peripheral.
+4. Use this information to go back to the source code and try to identify the section of code that is causing the problem.
