@@ -77,14 +77,15 @@ int main(void) {
 	//
 	// TODO: Remove unused config calls
 	//
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART7);
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOC);
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI2);
 
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0 | SYSCTL_PERIPH_UART7); // UART
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);	// UART0
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOC);	// UART7
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);	// SSI
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);	// GPIO
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI2);		// SSI
+
+	// UART0 and UART7
 	GPIOPinConfigure(GPIO_PA0_U0RX);
 	GPIOPinConfigure(GPIO_PC4_U7RX);
 	GPIOPinConfigure(GPIO_PA1_U0TX);
@@ -110,11 +111,14 @@ int main(void) {
 
 	//
 	// Configure SysTick for a 100Hz interrupt.
-	// From example
+	//
 	SysTickPeriodSet(g_ui32SysClock / 100);
 	SysTickIntEnable();
 	SysTickEnable();
 
+	//
+	// Floating point enable
+	//
 	FPUEnable();
 	FPULazyStackingEnable();
 
@@ -285,11 +289,20 @@ int printFloatToTerminal(float floatToPrint, int delimiter) {
 
 //*****************************************************************************
 //
-// This logs the data to the SD card
+//! This logs the data to the SD card
+//!
+//! \param inTimestamp as a string
+//! \param inDate as a string
+//! \param inLatitude as float
+//! \param inLongitude as float
+//! \param inSpeed as float
+//! \param inCourse as float
 //
 //*****************************************************************************
 
-int logToSD(char *inTimestamp, char *inDate, float inLatitude, float inLongitude, float inSpeed, float inCourse) {
+int logToSD(char *inTimestamp, char *inDate, float inLatitude,
+			float inLongitude, float inSpeed, float inCourse) {
+
 	FRESULT iFResult;   // File function return code
 	UINT 	bw;         // amount of bytes written to SD
 	char data[6][30] = {};
@@ -324,19 +337,17 @@ int logToSD(char *inTimestamp, char *inDate, float inLatitude, float inLongitude
 		}
 	}
 
-	// DEBUG - uncomment if needed
-	//   Prints the string to be written to the SD card to the terminal
-	// printStringToTerminal(logOutputString, 0);
-
     //
     // Mount the file system, using logical disk 0 and write to SD card
     //
 	iFResult = f_mount(0, &g_sFatFs);
     if (iFResult != FR_OK) {
-    	//UARTCharPut(UART0_BASE, 'N');
+    	// TODO: add output to error_log.txt file
     }
     else {
-    	//UARTCharPut(UART0_BASE, 'Y');
+    	//
+    	// Open/create file and append data to the end.
+    	//
     	f_open(&g_sFileObject, "/gps_log.txt", FA_WRITE | FA_OPEN_ALWAYS);
     	f_lseek(&g_sFileObject, f_size(&g_sFileObject));
     	f_write(&g_sFileObject, logOutputString, ustrlen(logOutputString), &bw);
@@ -347,6 +358,10 @@ int logToSD(char *inTimestamp, char *inDate, float inLatitude, float inLongitude
 			//
 		}
     }
+
+    //
+    // Unmount disk
+    //
     f_mount(0, NULL);
 
     return 0;
@@ -380,8 +395,8 @@ float convertCoordinate(float inCoordinate, const char *direction) {
 
 //*****************************************************************************
 //
-// This is the handler for this SysTick interrupt.  FatFs requires a timer tick
-// every 10 ms for internal timing purposes.
+//! This is the handler for this SysTick interrupt. FatFs requires a timer tick
+//! every 10 ms for internal timing purposes.
 //
 //*****************************************************************************
 void SysTickHandler(void) {
