@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <math.h>
 #include <utils/ustdlib.h>
 #include <stdio.h>
 #include "inc/hw_memmap.h"
@@ -24,6 +25,7 @@ int printStringToTerminal(char *stringToPrint, int delimiter);
 int printFloatToTerminal(float floatToPrint, int delimiter);
 static const char *StringFromFResult(FRESULT iFResult);       // For Debug
 int logToSD(char *inTimestamp, char *inDate, float inLatitude, float inLongitude, float inSpeed, float inCourse);
+float convertCoordinate(float inCoordinate, const char *direction);
 
 //*****************************************************************************
 //! Global Definitions
@@ -72,6 +74,9 @@ int main(void) {
 			SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
 			SYSCTL_CFG_VCO_480), 120000000);
 
+	//
+	// TODO: Remove unused config calls
+	//
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART7);
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
@@ -80,13 +85,14 @@ int main(void) {
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI2);
 
-
 	GPIOPinConfigure(GPIO_PA0_U0RX);
 	GPIOPinConfigure(GPIO_PC4_U7RX);
 	GPIOPinConfigure(GPIO_PA1_U0TX);
 	GPIOPinConfigure(GPIO_PC5_U7TX);
+
 	GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 	GPIOPinTypeUART(GPIO_PORTC_BASE, GPIO_PIN_4 | GPIO_PIN_5);
+
 	GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1);
 
 	GPIOPinConfigure(GPIO_PD0_SSI2XDAT1);
@@ -112,14 +118,15 @@ int main(void) {
 	FPUEnable();
 	FPULazyStackingEnable();
 
+	GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1, 0x00);
+
 	//**********************************
 	//! While forever
 	//**********************************
 
 	while (1) {
-		GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
 		if (UARTCharsAvail(UART7_BASE)) {
-			//GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0);
+			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0x00);
 			UARTreadChar = UARTCharGet(UART7_BASE);
 
 			if ((parsingId == false) && (UARTreadChar == '$')) {
@@ -147,29 +154,29 @@ int main(void) {
 			}
 			else if ((readingData == true) && (UARTreadChar == '\r')) {
 				sentence[j][k] = '\0';
-				// Read all the data into correctly typed vars
-				// Strings
+
+				//
+				// Copy data which will remain strings into named variables
+				//
 				char *timestamp = strdup(sentence[0]);
 				char *status = strdup(sentence[1]);
 				char *nsIndicator = strdup(sentence[3]);
 				char *ewIndicator = strdup(sentence[5]);
 				char *date = strdup(sentence[8]);
 
-				// Floats
-				if (strcmp(nsIndicator, "S") == 0) {
-					latitude = -1 * ustrtof(sentence[2], NULL);
-				}
-				else {
-					latitude = ustrtof(sentence[2], NULL);
-				}
+				//
+				// Process latitude
+				//
+				latitude = convertCoordinate(ustrtof(sentence[2], NULL), nsIndicator);
 
-				if (strcmp(ewIndicator, "W") == 0) {
-					longitude = -1 * ustrtof(sentence[4], NULL);
-				}
-				else {
-					longitude = ustrtof(sentence[4], NULL);
-				}
+				//
+				// Process longitude
+				//
+				longitude = convertCoordinate(ustrtof(sentence[4], NULL), ewIndicator);
+
+				//
 				// Convert speed from knots to mph
+				//
 				speed = 1.15078 * ustrtof(sentence[6], NULL);
 				course = ustrtof(sentence[7], NULL);
 
@@ -179,7 +186,7 @@ int main(void) {
 				//! (ANSI/VT100 Terminal Control Escape Sequences)
 				//! Adapted from the following: http://goo.gl/s43voj
 				//****************************************************
-/*DEBUG
+///*DEBUG ->
 				// Initial terminal setup
 				// Clear Terminal
 				printStringToTerminal("\033[2J",0);
@@ -199,7 +206,7 @@ int main(void) {
 				printStringToTerminal("Course\t\tSpeed (MPH)", 2);
 				printFloatToTerminal(course, 1);
 				printFloatToTerminal(speed, 2);
-DEBUG*/
+//<- DEBUG*/
 				logToSD(timestamp, date, latitude, longitude, speed, course);
 
 				// Deallocate memory used by strdup function
@@ -218,8 +225,8 @@ DEBUG*/
 				j++;
 				k = 0;
 			}
+		GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0xFF);
 		} // End if chars available
-		//GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0|GPIO_PIN_1, 0xFF);
 	}
 }
 
@@ -301,6 +308,9 @@ int logToSD(char *inTimestamp, char *inDate, float inLatitude, float inLongitude
 	sprintf(data[4], "%f", inSpeed);
 	sprintf(data[5], "%f", inCourse);
 
+	//
+	// Create a tab delimited string to write to SD card.
+	//
 	for (i = 0; i < 6; i++) {
 	    j = 0;
 		while (data[i][j] != '\0') {
@@ -333,7 +343,9 @@ int logToSD(char *inTimestamp, char *inDate, float inLatitude, float inLongitude
     	f_write(&g_sFileObject, logOutputString, ustrlen(logOutputString), &bw);
     	f_close(&g_sFileObject);
 		if (bw == ustrlen(logOutputString)) {
-			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
+			//
+			// TODO: add an indicator for successful SD write
+			//
 		}
     }
     f_mount(0, NULL);
@@ -341,6 +353,31 @@ int logToSD(char *inTimestamp, char *inDate, float inLatitude, float inLongitude
     return 0;
 }
 
+//*****************************************************************************
+//
+//! Returns a GPS coordinate in decimal format.
+//!
+//! \param inCoordinate is latitude or longitude as a float.
+//! \param direction is the N,S,E,W indicator in as a string.
+//
+//*****************************************************************************
+float convertCoordinate(float inCoordinate, const char *direction) {
+    float dd, mm, outputCoordinate;
+
+    dd = floor(inCoordinate * .01);
+    mm = (inCoordinate - (dd*100)) / 60;
+    outputCoordinate = dd + mm;
+
+    if (strcmp(direction, "S") == 0) {
+        return outputCoordinate *= -1;
+    }
+    else if (strcmp(direction, "W") == 0) {
+        return outputCoordinate *= -1;
+    }
+    else {
+        return outputCoordinate;
+    }
+}
 
 //*****************************************************************************
 //
