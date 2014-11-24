@@ -78,7 +78,8 @@ int main(void) {
 	// TODO: Remove unused config calls
 	//
 
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0 | SYSCTL_PERIPH_UART7); // UART
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);	// UART
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART7);	// UART
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);	// UART0
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOC);	// UART7
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);	// SSI
