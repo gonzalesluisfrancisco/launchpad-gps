@@ -71,10 +71,11 @@ decimal = dd + (mm.mmmm/60)
 
 Pin Location  | Port and pin | Function
 ------------- | -------------|----------
-X1-46         | PD3          | CLK
-X1-48         | PD1          | MOSI
-X1-50         | PD0          | MISO
-X1-52         | PD2          | CS
+X1-46         | PD3          | CLK (Clock)
+X1-48         | PD1          | MOSI (Master Out - Slave In)
+X1-50         | PD0          | MISO (Master In - Slave Out)
+X1-52         | PD2          | CS (Chip Select)
+X1-32         | PK3          | CD (Chip Detect)
 
 Tivaware makes use of the [FatFs](http://elm-chan.org/fsw/ff/00index_e.html) Generic FAT File System Module library and is included in ${TIVAWARE_INSTALL}/third_party/fatfs which contains a port to the Tiva C Connected Launchpad located at port/mmc-ek-tm4c1294xl.c. The functions required for SD access are defined per the [FatFs Application Notes](http://elm-chan.org/fsw/ff/en/appnote.html).  An example program for the dk-tm4c129x located at `${TIVAWARE_INSTALL}/examples/boards/dk-tm4c129x/sd_card/dk-tm4c129x` development board was used in adapting the code for the project.
 
@@ -86,6 +87,7 @@ Tivaware makes use of the [FatFs](http://elm-chan.org/fsw/ff/00index_e.html) Gen
     * Edit the peripheral and GPIO definitions as needed to match the hardware connections being used.
 4. Add `extern void SysTickHandler(void);` to *startup_ccs.c in External declarations section. Add `SysTickHandler` to the interrupt vector table on the line labeled `// The SysTick handler`.
 
+# TODO: add description of each pin and how it is implemented in software.
 
 #### Lessons Learned
 
@@ -94,8 +96,7 @@ If the program is not functioning as designed, pause the debugger. If a hard fau
 
 TI has a helpful guide, [Diagnosing Software Faults in Stellaris Microcontrollers](http://www.ti.com/lit/an/spma043/spma043.pdf), which details various methods to debug if a hard fault occurs. In my case, I had overlooked a step in the initialization of a GPIO port. Using the method taken from the debugging guide, I was able to determine the specific port that was causing the hard fault in order to fix the problem. To be alerted whenever a hard fault occurs, add breakpoints in the `while(1)` loops of the default fault handlers.
 
-Method 1
-
+**Method 1**
 1. Use the debugger to examine the NVIC_FAULT_STAT register to find the type of fault and the status bits that indicate the specific cause.
 2. If there is a valid fault address register (FAULTADDR or MMADR), then read that to find the faulting address.
 3. Study the memory map in the Stellaris data sheet to find a clue about the cause of the fault. Often the address is in the register space of a peripheral.
