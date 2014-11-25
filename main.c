@@ -26,6 +26,7 @@ int printFloatToTerminal(float floatToPrint, int delimiter);
 static const char *StringFromFResult(FRESULT iFResult);       // For Debug
 int logToSD(char *inTimestamp, char *inDate, float inLatitude, float inLongitude, float inSpeed, float inCourse);
 float convertCoordinate(float inCoordinate, const char *direction);
+int chipDetect(void);
 
 //*****************************************************************************
 //! Global Definitions
@@ -62,9 +63,9 @@ int main(void) {
 	char	sentence[10][20] = {};
 	bool	parsingId = false;
 	bool	readingData = false;
-	uint32_t	i = 0; // Sentence id chars
-	uint32_t	j = 0; // NMEA sentence pointer
-	uint32_t	k = 0; // NMEA chars
+	uint32_t	i = 0; 	// Sentence id chars
+	uint32_t	j = 0; 	// NMEA sentence pointer
+	uint32_t	k = 0; 	// NMEA chars
 
 	//*************************************************************************
 	//! I/O config and setup
@@ -85,6 +86,7 @@ int main(void) {
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);	// SSI
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);	// GPIO
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI2);		// SSI
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOK);	// GPIO
 
 	// UART0 and UART7
 	GPIOPinConfigure(GPIO_PA0_U0RX);
@@ -95,12 +97,19 @@ int main(void) {
 	GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 	GPIOPinTypeUART(GPIO_PORTC_BASE, GPIO_PIN_4 | GPIO_PIN_5);
 
+	// LED indicators
 	GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+
+	// SD Chip Detect (CD).
+	GPIOPinTypeGPIOInput(GPIO_PORTK_BASE, GPIO_PIN_3);
 
 	GPIOPinConfigure(GPIO_PD0_SSI2XDAT1);
 	GPIOPinConfigure(GPIO_PD1_SSI2XDAT0);
 	GPIOPinConfigure(GPIO_PD2_SSI2FSS);
 	GPIOPinConfigure(GPIO_PD3_SSI2CLK);
+
+	// SD Chip Detect (CD) - weak pull-up input
+	GPIOPadConfigSet(GPIO_PORTK_BASE, GPIO_PIN_3, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
 
 	// Debug UART output config
 	UARTConfigSetExpClk(UART0_BASE, g_ui32SysClock, 115200,
@@ -209,8 +218,17 @@ int main(void) {
 				printStringToTerminal("Course\t\tSpeed (MPH)", 2);
 				printFloatToTerminal(course, 1);
 				printFloatToTerminal(speed, 2);
+				if (chipDetect()) {
+					printStringToTerminal("\r\n*Logging to SD Card*", 2);
+				}
 //<- DEBUG*/
-				logToSD(timestamp, date, latitude, longitude, speed, course);
+
+				//
+				// Check if SD card is present and write data if true.
+				//
+				if (chipDetect()) {
+					logToSD(timestamp, date, latitude, longitude, speed, course);
+				}
 
 				// Deallocate memory used by strdup function
 				free(timestamp);
@@ -405,4 +423,17 @@ void SysTickHandler(void) {
     // Call the FatFs tick timer.
     //
     disk_timerproc();
+}
+
+//*****************************************************************************
+//
+//! This reads the Chip Detect pin of the SD card and returns the state.
+//! Function returns 1 if card is present, returns 0 if not.
+//
+//*****************************************************************************
+int chipDetect(void) {
+	volatile uint32_t chipDetectStatus = 0; // SD Chip Detect Pin
+
+	chipDetectStatus = GPIOPinRead(GPIO_PORTK_BASE, GPIO_PIN_3);
+	return chipDetectStatus;
 }
