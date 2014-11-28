@@ -23,7 +23,6 @@
  //**********************************
 int printStringToTerminal(char *stringToPrint, int delimiter);
 int printFloatToTerminal(float floatToPrint, int delimiter);
-static const char *StringFromFResult(FRESULT iFResult);       // For Debug
 int logToSD(char *inTimestamp, char *inDate, float inLatitude, float inLongitude, float inSpeed, float inCourse);
 float convertCoordinate(float inCoordinate, const char *direction);
 int chipDetect(void);
@@ -39,8 +38,6 @@ int gpsData(void);
 //
 //*****************************************************************************
 static FATFS g_sFatFs;
-static DIR g_sDirObject;
-static FILINFO g_sFileInfo;
 static FIL g_sFileObject;
 
 //*****************************************************************************
