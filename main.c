@@ -27,6 +27,7 @@ static const char *StringFromFResult(FRESULT iFResult);       // For Debug
 int logToSD(char *inTimestamp, char *inDate, float inLatitude, float inLongitude, float inSpeed, float inCourse);
 float convertCoordinate(float inCoordinate, const char *direction);
 int chipDetect(void);
+int gpsData(void);
 
 //*****************************************************************************
 //! Global Definitions
@@ -49,23 +50,50 @@ static FIL g_sFileObject;
 //*****************************************************************************
 uint32_t g_ui32SysClock;
 
+//*****************************************************************************
+//
+// The update rate and current pulse count
+// Update rate = updateRate+1
+//
+//*****************************************************************************
+uint32_t updateRate = 5;
+uint32_t updateCounter = 0;
+
+//*****************************************************************************
+//
+//! This is the Pulse Per Second interrupt handler.
+//! The updateCounter is incremented on each Pulse per second call, if equal to
+//! the update rate, the GPS data is parsed and logged.
+//
+//*****************************************************************************
+void PortKIntHandler(void) {
+	uint32_t intStatus = 0;
+
+	//
+	// Get the current interrupt status for Port K
+	//
+	intStatus = GPIOIntStatus(GPIO_PORTK_BASE,true);
+
+	//
+	// Clear the set interrupts for Port K
+	//
+	GPIOIntClear(GPIO_PORTK_BASE,intStatus);
+
+	//
+	// Execute code for PK2 interrupt
+	//
+	if((intStatus & GPIO_INT_PIN_2) == GPIO_INT_PIN_2){
+		if (updateRate == updateCounter++) {
+			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1, 0xFF);
+			gpsData();
+			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1, 0x00);
+			updateCounter = 0;
+		}
+	}
+}
+
 
 int main(void) {
-
-	//*************************************************************************
-	//
-	// Local variable definitions
-	//
-	//*************************************************************************
-	float	latitude, longitude, speed, course;
-	char	UARTreadChar;
-	char	idBuffer[7] = {};
-	char	sentence[10][20] = {};
-	bool	parsingId = false;
-	bool	readingData = false;
-	uint32_t	i = 0; 	// Sentence id chars
-	uint32_t	j = 0; 	// NMEA sentence pointer
-	uint32_t	k = 0; 	// NMEA chars
 
 	//*************************************************************************
 	//! I/O config and setup
@@ -100,8 +128,16 @@ int main(void) {
 	// LED indicators
 	GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
-	// SD Chip Detect (CD).
-	GPIOPinTypeGPIOInput(GPIO_PORTK_BASE, GPIO_PIN_3);
+	// SD Chip Detect (PK3) and GPS Pulse Per Second (PK2)
+	GPIOPinTypeGPIOInput(GPIO_PORTK_BASE, GPIO_PIN_2|GPIO_PIN_3);
+	// Pulse Per Second input pin config as weak pull-down
+	GPIOPadConfigSet(GPIO_PORTK_BASE,GPIO_PIN_2,GPIO_STRENGTH_2MA,GPIO_PIN_TYPE_STD_WPD);
+	// Pulse Per Second input pin config as rising edge triggered interrupt
+	GPIOIntTypeSet(GPIO_PORTK_BASE,GPIO_PIN_2,GPIO_RISING_EDGE);
+	// Register Port K as interrupt
+	GPIOIntRegister(GPIO_PORTK_BASE, PortKIntHandler);
+	// Enable Port K pin 2 interrupt
+	GPIOIntEnable(GPIO_PORTK_BASE, GPIO_INT_PIN_2);
 
 	GPIOPinConfigure(GPIO_PD0_SSI2XDAT1);
 	GPIOPinConfigure(GPIO_PD1_SSI2XDAT0);
@@ -137,116 +173,6 @@ int main(void) {
 	//**********************************
 
 	while (1) {
-		GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1, 0x00);
-		if (UARTCharsAvail(UART7_BASE)) {
-			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0xFF);
-			UARTreadChar = UARTCharGet(UART7_BASE);
-
-			if ((parsingId == false) && (UARTreadChar == '$')) {
-				i = 0;
-				parsingId = true;
-				readingData = false;
-			}
-			else if ((parsingId == true) && (UARTreadChar == ',')) {
-				idBuffer[i] = '\0';
-				i = 0;
-				parsingId = false;
-
-				if (strcmp(idBuffer, "GPRMC") == 0) {
-					j = 0;
-					k = 0;
-					readingData = true;
-				}
-				else {
-					readingData = false;
-				}
-			}
-			else if ((parsingId == true) && (UARTreadChar != ',')) {
-				idBuffer[i] = UARTreadChar;
-				i++;
-			}
-			else if ((readingData == true) && (UARTreadChar == '\r')) {
-				sentence[j][k] = '\0';
-
-				//
-				// Copy data which will remain strings into named variables
-				//
-				char *timestamp = strdup(sentence[0]);
-				char *status = strdup(sentence[1]);
-				char *nsIndicator = strdup(sentence[3]);
-				char *ewIndicator = strdup(sentence[5]);
-				char *date = strdup(sentence[8]);
-
-				//
-				// Process latitude
-				//
-				latitude = convertCoordinate(ustrtof(sentence[2], NULL), nsIndicator);
-
-				//
-				// Process longitude
-				//
-				longitude = convertCoordinate(ustrtof(sentence[4], NULL), ewIndicator);
-
-				//
-				// Convert speed from knots to mph
-				//
-				speed = 1.15078 * ustrtof(sentence[6], NULL);
-				course = ustrtof(sentence[7], NULL);
-
-				//****************************************************
-				//! Data Debug/Display UART terminal movement
-				//!
-				//! (ANSI/VT100 Terminal Control Escape Sequences)
-				//! Adapted from the following: http://goo.gl/s43voj
-				//****************************************************
-///*DEBUG ->
-				// Initial terminal setup
-				// Clear Terminal
-				printStringToTerminal("\033[2J",0);
-				// Cursor to 0,0
-				printStringToTerminal("\033[0;0H", 0);
-				printStringToTerminal("Time (UTC)", 0);
-				//Cursor to 0,1
-				printStringToTerminal("\033[2;0H", 0);
-				// Print values to the terminal
-				printStringToTerminal(timestamp, 2);
-				printStringToTerminal("\r\n", 0);
-				printStringToTerminal("Latitude\tLongitude", 2);
-				printFloatToTerminal(latitude, 1);
-				printFloatToTerminal(longitude, 2);
-				printStringToTerminal("\r\n", 0);
-				printStringToTerminal("Course\t\tSpeed (MPH)", 2);
-				printFloatToTerminal(course, 1);
-				printFloatToTerminal(speed, 2);
-				if (chipDetect()) {
-					printStringToTerminal("\r\n*Logging to SD Card*", 2);
-				}
-//<- DEBUG*/
-
-				//
-				// Check if SD card is present and write data if true.
-				//
-				if (chipDetect()) {
-					logToSD(timestamp, date, latitude, longitude, speed, course);
-				}
-
-				// Deallocate memory used by strdup function
-				free(timestamp);
-				free(status);
-				free(nsIndicator);
-				free(ewIndicator);
-				free(date);
-			}
-			else if ((readingData == true) && (UARTreadChar != ',')){
-				sentence[j][k] = UARTreadChar;
-				k++;
-			}
-			else if ((readingData == true) && (UARTreadChar == ',')){
-				sentence[j][k] = '\0';
-				j++;
-				k = 0;
-			}
-		} // End if chars available
 	}
 }
 
@@ -337,7 +263,7 @@ int logToSD(char *inTimestamp, char *inDate, float inLatitude,
 	sprintf(data[4], "%f", inSpeed);
 	sprintf(data[5], "%f", inCourse);
 
-	GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0xFF);
+	//GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0xFF);
 
 	//
 	// Create a tab delimited string to write to SD card.
@@ -436,4 +362,141 @@ int chipDetect(void) {
 
 	chipDetectStatus = GPIOPinRead(GPIO_PORTK_BASE, GPIO_PIN_3);
 	return chipDetectStatus;
+}
+
+//*****************************************************************************
+//
+//! This reads the data from the GPS module, parses the data, and saves to
+//! the microSD card, if a card is present.
+//
+//*****************************************************************************
+int gpsData(void) {
+    float	latitude, longitude, speed, course;
+    char	UARTreadChar;
+    char	idBuffer[7] = {};
+    char	sentence[10][20] = {};
+    bool	parsingId = false;
+    bool	readingData = false;
+    bool    readComplete = false;
+
+    uint32_t	i = 0; 	// Sentence id chars
+    uint32_t	j = 0; 	// NMEA sentence pointer
+    uint32_t	k = 0; 	// NMEA chars
+
+    while (readComplete != true) {
+    	//GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1, 0x00);
+    	if (UARTCharsAvail(UART7_BASE)) {
+    		//GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0xFF);
+    		UARTreadChar = UARTCharGet(UART7_BASE);
+
+    		if ((parsingId == false) && (UARTreadChar == '$')) {
+    			i = 0;
+    			parsingId = true;
+    			readingData = false;
+    		}
+    		else if ((parsingId == true) && (UARTreadChar == ',')) {
+    			idBuffer[i] = '\0';
+    			i = 0;
+    			parsingId = false;
+
+    			if (strcmp(idBuffer, "GPRMC") == 0) {
+    				j = 0;
+    				k = 0;
+    				readingData = true;
+    			}
+    			else {
+    				readingData = false;
+    			}
+    		}
+    		else if ((parsingId == true) && (UARTreadChar != ',')) {
+    			idBuffer[i] = UARTreadChar;
+    			i++;
+    		}
+    		else if ((readingData == true) && (UARTreadChar == '\r')) {
+    			sentence[j][k] = '\0';
+
+    			//
+    			// Copy data which will remain strings into named variables
+    			//
+    			char *timestamp = strdup(sentence[0]);
+    			char *status = strdup(sentence[1]);
+    			char *nsIndicator = strdup(sentence[3]);
+    			char *ewIndicator = strdup(sentence[5]);
+    			char *date = strdup(sentence[8]);
+
+    			//
+    			// Process latitude
+    			//
+    			latitude = convertCoordinate(ustrtof(sentence[2], NULL), nsIndicator);
+
+    			//
+    			// Process longitude
+    			//
+    			longitude = convertCoordinate(ustrtof(sentence[4], NULL), ewIndicator);
+
+    			//
+    			// Convert speed from knots to mph
+    			//
+    			speed = 1.15078 * ustrtof(sentence[6], NULL);
+    			course = ustrtof(sentence[7], NULL);
+
+    			//****************************************************
+    			//! Data Debug/Display UART terminal movement
+    			//!
+    			//! (ANSI/VT100 Terminal Control Escape Sequences)
+    			//! Adapted from the following: http://goo.gl/s43voj
+    			//****************************************************
+///*DEBUG ->
+    			// Initial terminal setup
+    			// Clear Terminal
+    			printStringToTerminal("\033[2J",0);
+    			// Cursor to 0,0
+    			printStringToTerminal("\033[0;0H", 0);
+    			printStringToTerminal("Time (UTC)", 0);
+    			//Cursor to 0,1
+    			printStringToTerminal("\033[2;0H", 0);
+    			// Print values to the terminal
+    			printStringToTerminal(timestamp, 2);
+    			printStringToTerminal("\r\n", 0);
+    			printStringToTerminal("Latitude\tLongitude", 2);
+    			printFloatToTerminal(latitude, 1);
+    			printFloatToTerminal(longitude, 2);
+    			printStringToTerminal("\r\n", 0);
+    			printStringToTerminal("Course\t\tSpeed (MPH)", 2);
+    			printFloatToTerminal(course, 1);
+    			printFloatToTerminal(speed, 2);
+    			if (chipDetect()) {
+    				printStringToTerminal("\r\n*Logging to SD Card*", 2);
+    			}
+//<- DEBUG*/
+
+    			//
+    			// Check if SD card is present and write data if true.
+    			//
+    			if (chipDetect()) {
+    				logToSD(timestamp, date, latitude, longitude, speed, course);
+    			}
+
+    			// Deallocate memory used by strdup function
+    			free(timestamp);
+    			free(status);
+    			free(nsIndicator);
+    			free(ewIndicator);
+    			free(date);
+
+    			return 0;
+    		}
+    		else if ((readingData == true) && (UARTreadChar != ',')){
+    			sentence[j][k] = UARTreadChar;
+    			k++;
+    		}
+    		else if ((readingData == true) && (UARTreadChar == ',')){
+    			sentence[j][k] = '\0';
+    			j++;
+    			k = 0;
+    		}
+    	} // End if chars available
+    } // end while
+
+    return -1;
 }
