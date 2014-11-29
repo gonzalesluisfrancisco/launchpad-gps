@@ -16,8 +16,8 @@ The module used is based around the MTK3339 chipset. The module outputs NMEA sen
 
 Pin Location  | Port and pin | Function
 ------------- | -------------|----------
-J1-3          | PC4          | RX
-J1-4          | PC5          | TX
+X1-21          | PC4          | RX
+X1-23          | PC5          | TX
 
 1. Begin with UART polling version of lab10 from [TM4C1294XL Connected LaunchPad Workshop](http://processors.wiki.ti.com/index.php/Creating_IoT_Solutions_with_the_TM4C1294XL_Connected_LaunchPad_Workshop) as a basic template.
 2. To allow for easy debugging, use two UARTs. One UART for GPS input and another that echoes the input to a terminal.
