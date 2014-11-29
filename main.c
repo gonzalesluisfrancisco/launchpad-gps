@@ -34,7 +34,7 @@ int gpsData(void);
 
 //*****************************************************************************
 //
-// The following are data structures used by FatFs.
+//! The following are data structures used by FatFs.
 //
 //*****************************************************************************
 static FATFS g_sFatFs;
@@ -42,18 +42,18 @@ static FIL g_sFileObject;
 
 //*****************************************************************************
 //
-// The system clock frequency in Hz.
+//! The system clock frequency in Hz.
 //
 //*****************************************************************************
 uint32_t g_ui32SysClock;
 
 //*****************************************************************************
 //
-// The update rate and current pulse count
-// Update rate = updateRate+1
+//! The update rate and current pulse count
+//! Update rate = updateRate+1
 //
 //*****************************************************************************
-uint32_t updateRate = 5;
+uint32_t updateRate = 0;
 uint32_t updateCounter = 0;
 
 //*****************************************************************************
@@ -81,9 +81,9 @@ void PortKIntHandler(void) {
 	//
 	if((intStatus & GPIO_INT_PIN_2) == GPIO_INT_PIN_2){
 		if (updateRate == updateCounter++) {
-			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1, 0xFF);
+			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0x02);
 			gpsData();
-			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1, 0x00);
+			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0x00);
 			updateCounter = 0;
 		}
 	}
@@ -99,10 +99,6 @@ int main(void) {
 	g_ui32SysClock = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
 			SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
 			SYSCTL_CFG_VCO_480), 120000000);
-
-	//
-	// TODO: Remove unused config calls
-	//
 
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);	// UART
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART7);	// UART
@@ -165,10 +161,11 @@ int main(void) {
 	FPUEnable();
 	FPULazyStackingEnable();
 
-	//**********************************
-	//! While forever
-	//**********************************
+	GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1, 0x00);
 
+	//
+	// While forever
+	//
 	while (1) {
 	}
 }
