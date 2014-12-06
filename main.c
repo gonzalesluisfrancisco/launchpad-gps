@@ -159,8 +159,7 @@ void lowPowerMode(int delaySeconds) {
     HibernateRequest();
 
     //
-    // Need a loop here to wait for the power to be removed.
-    // removed while executing in this loop.
+    // Spin here to wait for the power to be removed.
     //
     for(;;)
     {
@@ -172,7 +171,7 @@ int main(void) {
 	// Status of Hibernation module
 	uint32_t ui32Status = 0;
 	// Length of time to hibernate
-	uint32_t hibernationTime = 1;
+	uint32_t hibernationTime = 600;
 
 	g_ui32SysClock = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
 			SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
@@ -671,10 +670,6 @@ int gpsData(void) {
     			free(nsIndicator);
     			free(ewIndicator);
     			free(date);
-    			latitude = 0;
-    			longitude = 0;
-    			speed = 0;
-    			course = 0;
 
     			return 1;
     		}
