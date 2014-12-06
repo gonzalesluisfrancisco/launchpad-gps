@@ -130,7 +130,7 @@ all: launchpad-gps.out
 launchpad-gps.out: $(OBJS) $(CMD_SRCS) $(LIB_SRCS) $(GEN_CMDS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: ARM Linker'
-	"/opt/ti/ccsv6/tools/compiler/arm_5.1.6/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 --abi=eabi -me -g --gcc --define=PART_TM4C1294NCPDT --define=ccs="ccs" --display_error_number --diag_warning=225 --diag_wrap=off -z -m"launchpad-gps.map" --heap_size=0x1000 --stack_size=0x1000 -i"/opt/ti/ccsv6/tools/compiler/arm_5.1.6/lib" -i"/opt/ti/ccsv6/tools/compiler/arm_5.1.6/include" --reread_libs --warn_sections --display_error_number --diag_wrap=off --xml_link_info="launchpad-gps_linkInfo.xml" --rom_model -o "launchpad-gps.out" $(ORDERED_OBJS)
+	"/opt/ti/ccsv6/tools/compiler/arm_5.1.6/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 --abi=eabi -me -g --gcc --define=PART_TM4C1294NCPDT --define=ccs="ccs" --display_error_number --diag_warning=225 --diag_wrap=off -z -m"launchpad-gps.map" --heap_size=0x2000 --stack_size=0x2000 -i"/opt/ti/ccsv6/tools/compiler/arm_5.1.6/lib" -i"/opt/ti/ccsv6/tools/compiler/arm_5.1.6/include" --reread_libs --warn_sections --display_error_number --diag_wrap=off --xml_link_info="launchpad-gps_linkInfo.xml" --rom_model -o "launchpad-gps.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

@@ -6,6 +6,7 @@
 #include <utils/ustdlib.h>
 #include <stdio.h>
 #include "inc/hw_memmap.h"
+#include "inc/hw_hibernate.h"
 #include "inc/hw_types.h"
 #include "driverlib/gpio.h"
 #include "driverlib/pin_map.h"
@@ -13,6 +14,7 @@
 #include "driverlib/systick.h"
 #include "driverlib/uart.h"
 #include "driverlib/fpu.h"
+#include "driverlib/hibernate.h"
 #include "inc/hw_ints.h"
 #include "driverlib/interrupt.h"
 #include "third_party/fatfs/src/ff.h"
@@ -27,6 +29,7 @@ int logToSD(char *inTimestamp, char *inDate, float inLatitude, float inLongitude
 float convertCoordinate(float inCoordinate, const char *direction);
 int chipDetect(void);
 int gpsData(void);
+void lowPowerMode(int delaySeconds);
 
 //*****************************************************************************
 //! Global Definitions
@@ -53,8 +56,17 @@ uint32_t g_ui32SysClock;
 //! Update rate = updateRate+1
 //
 //*****************************************************************************
-uint32_t updateRate = 0;
-uint32_t updateCounter = 0;
+volatile uint32_t updateRate = 0;
+volatile uint32_t updateCounter = 0;
+
+//*****************************************************************************
+//
+//! Data to to be saved prior to hibernation
+//! lowPowerOn = 1 if low power mode is enabled (default); 0 if not.
+//! logComplete =  Low Power Mode status (set after PPS interrupt fires)
+//*****************************************************************************
+uint32_t lowPowerOn = 1;
+uint32_t logComplete = 0;
 
 //*****************************************************************************
 //
@@ -85,20 +97,91 @@ void PortKIntHandler(void) {
 			gpsData();
 			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0x00);
 			updateCounter = 0;
+
+			//
+			// Disable PPS interrupt after one read if in low power mode
+			//
+			if (lowPowerOn == 1) {
+				IntDisable(INT_GPIOK);
+				logComplete = 1;
+			}
 		}
 	}
 }
 
+//*****************************************************************************
+//
+//! This is the hibernate module handler.
+//! When the RTC timer expires, an interrupt is generated and the the GPS
+//!	data is parsed and logged.
+//!
+//! If the Wake button is pressed, low power mode is disabled.
+//! A reset is required to renable low power mode after Wake has been pressed.
+//
+//*****************************************************************************
+void lowPowerMode(int delaySeconds) {
+    uint32_t ui32Status;
+
+    //
+    // Set the RTC to 0 or an initial value. The RTC can be set once when the
+    // system is initialized after the cold startup and then left to run. Or
+    // it can be initialized before every hibernate.
+    //
+    HibernateRTCSet(0);
+
+    //
+    // Set the match 0 register for 30 seconds from now.
+    //
+    HibernateRTCMatchSet(0, HibernateRTCGet() + delaySeconds);
+
+    //
+    // Clear any pending status.
+    //
+    ui32Status = HibernateIntStatus(0);
+    HibernateIntClear(ui32Status);
+
+    //
+    // Save the program state information. The state information is stored in
+    // the pui32NVData[] array. It is not necessary to save the full 16 words
+    // of data, only as much as is actually needed by the program.
+    //
+    HibernateDataSet(&lowPowerOn, 1);
+
+    //
+    // Configure to wake on RTC match or when wake button is pressed.
+    //
+    HibernateWakeSet(HIBERNATE_WAKE_RTC | HIBERNATE_WAKE_PIN);
+
+    //
+    // Request hibernation. The following call may return because it takes a
+    // finite amount of time for power to be removed.
+    //
+    HibernateRequest();
+
+    //
+    // Need a loop here to wait for the power to be removed.
+    // removed while executing in this loop.
+    //
+    for(;;)
+    {
+    }
+}
+
 
 int main(void) {
-
-	//*************************************************************************
-	//! I/O config and setup
-	//*************************************************************************
+	// Status of Hibernation module
+	uint32_t ui32Status = 0;
+	// Length of time to hibernate
+	uint32_t hibernationTime = 1;
 
 	g_ui32SysClock = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
 			SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
 			SYSCTL_CFG_VCO_480), 120000000);
+
+
+	//*************************************************************************
+	//! I/O config and setup
+	//*************************************************************************
 
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);	// UART
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART7);	// UART
@@ -108,6 +191,7 @@ int main(void) {
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);	// GPIO
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI2);		// SSI
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOK);	// GPIO
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_HIBERNATE);// Hibernation
 
 	// UART0 and UART7
 	GPIOPinConfigure(GPIO_PA0_U0RX);
@@ -121,7 +205,9 @@ int main(void) {
 	// LED indicators
 	GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
+	//
 	// SD Chip Detect (PK3) and GPS Pulse Per Second (PK2)
+	//
 	GPIOPinTypeGPIOInput(GPIO_PORTK_BASE, GPIO_PIN_2|GPIO_PIN_3);
 	// Pulse Per Second input pin config as weak pull-down
 	GPIOPadConfigSet(GPIO_PORTK_BASE,GPIO_PIN_2,GPIO_STRENGTH_2MA,GPIO_PIN_TYPE_STD_WPD);
@@ -131,6 +217,12 @@ int main(void) {
 	GPIOIntRegister(GPIO_PORTK_BASE, PortKIntHandler);
 	// Enable Port K pin 2 interrupt
 	GPIOIntEnable(GPIO_PORTK_BASE, GPIO_INT_PIN_2);
+	//
+	// Disable PPS pin interrupt by default
+	//
+	if(IntIsEnabled(INT_GPIOK)) {
+			IntDisable(INT_GPIOK);
+	}
 
 	GPIOPinConfigure(GPIO_PD0_SSI2XDAT1);
 	GPIOPinConfigure(GPIO_PD1_SSI2XDAT0);
@@ -161,15 +253,107 @@ int main(void) {
 	FPUEnable();
 	FPULazyStackingEnable();
 
+	//
+	// Clear user LEDs
+	//
 	GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1, 0x00);
 
+	//*************************************************************************
+	//! Hibernation mode checks and setup
+	//*************************************************************************
+
 	//
-	// While forever
+	// Check to see if Hibernation module is already active, which could mean
+	// that the processor is waking from a hibernation.
 	//
-	while (1) {
+	if(HibernateIsActive()) {
+	    //
+	    // Read the status bits to see what caused the wake.  Clear the wake
+	    // source so that the device can be put into hibernation again.
+	    //
+	    ui32Status = HibernateIntStatus(0);
+	    HibernateIntClear(ui32Status);
+
+	    //
+	    // Wake was due to RTC match.
+	    //
+	    if(ui32Status & HIBERNATE_INT_RTC_MATCH_0) {
+	    	//
+	    	// Enable interrupt to fire GPS read/write on next PPS signal.
+	    	//
+	    	IntEnable(INT_GPIOK);
+
+	    	//
+	    	// Spin here waiting for a PPS signal
+	    	//
+	    	while (!logComplete);
+	    	logComplete = 0;
+	    }
+
+	    //
+	    // Wake was due to the External Wake pin.
+	    //
+	    else if(ui32Status & HIBERNATE_INT_PIN_WAKE) {
+	    	//
+	    	// Enable interrupt to fire GPS read/write on next PPS signal.
+	    	//
+	    	IntEnable(INT_GPIOK);
+
+	    	//
+	    	// Spin here waiting for a PPS signal
+	    	//
+	    	while (!logComplete);
+	    	logComplete = 0;
+
+	    	//
+	    	// Switch off low power mode
+	    	//
+	    	lowPowerOn = 0;
+
+	    }
+	}
+
+	//
+	// Configure Hibernate module clock.
+	//
+	HibernateEnableExpClk(g_ui32SysClock);
+
+	//
+	// If the wake was not due to the above sources, then it was a system
+	// reset.
+	//
+	if(!(ui32Status & (HIBERNATE_INT_PIN_WAKE | HIBERNATE_INT_RTC_MATCH_0))) {
+	    //
+	    // Configure the module clock source.
+	    //
+	    HibernateClockConfig(HIBERNATE_OSC_LOWDRIVE);
+	}
+
+	//
+	// Enable RTC mode.
+	//
+	HibernateRTCEnable();
+
+	//
+	// Loop forever
+	//
+	while(1) {
+	    //
+	    // If low power mode is set (default), hibernate again
+	    // If not, spin in nested while(1) for faster updates from PPS pin ints.
+	    //
+	    if(lowPowerOn) {
+	    	lowPowerMode(hibernationTime);
+	    }
+	    else {
+	    	if(!IntIsEnabled(INT_GPIOK)) {
+	    			IntEnable(INT_GPIOK);
+	    	}
+	        while(1) {
+	        }
+	    }
 	}
 }
-
 
 //*****************************************************************************
 //
@@ -418,6 +602,13 @@ int gpsData(void) {
     			char *ewIndicator = strdup(sentence[5]);
     			char *date = strdup(sentence[8]);
 
+    		    //
+    			// Stop processing and return 0 if data invalid
+    			//
+    			if (strcmp(status, "V") == 0) {
+    		        return 0;
+    		    }
+
     			//
     			// Process latitude
     			//
@@ -440,29 +631,32 @@ int gpsData(void) {
     			//! (ANSI/VT100 Terminal Control Escape Sequences)
     			//! Adapted from the following: http://goo.gl/s43voj
     			//****************************************************
-///*DEBUG ->
-    			// Initial terminal setup
-    			// Clear Terminal
-    			printStringToTerminal("\033[2J",0);
-    			// Cursor to 0,0
-    			printStringToTerminal("\033[0;0H", 0);
-    			printStringToTerminal("Time (UTC)", 0);
-    			//Cursor to 0,1
-    			printStringToTerminal("\033[2;0H", 0);
-    			// Print values to the terminal
-    			printStringToTerminal(timestamp, 2);
-    			printStringToTerminal("\r\n", 0);
-    			printStringToTerminal("Latitude\tLongitude", 2);
-    			printFloatToTerminal(latitude, 1);
-    			printFloatToTerminal(longitude, 2);
-    			printStringToTerminal("\r\n", 0);
-    			printStringToTerminal("Course\t\tSpeed (MPH)", 2);
-    			printFloatToTerminal(course, 1);
-    			printFloatToTerminal(speed, 2);
-    			if (chipDetect()) {
-    				printStringToTerminal("\r\n*Logging to SD Card*", 2);
+    			//
+    			// Display serial output only if not in low power mode
+    			//
+    			if (!lowPowerOn) {
+					// Initial terminal setup
+					// Clear Terminal
+					printStringToTerminal("\033[2J",0);
+					// Cursor to 0,0
+					printStringToTerminal("\033[0;0H", 0);
+					printStringToTerminal("Time (UTC)", 0);
+					//Cursor to 0,1
+					printStringToTerminal("\033[2;0H", 0);
+					// Print values to the terminal
+					printStringToTerminal(timestamp, 2);
+					printStringToTerminal("\r\n", 0);
+					printStringToTerminal("Latitude\tLongitude", 2);
+					printFloatToTerminal(latitude, 1);
+					printFloatToTerminal(longitude, 2);
+					printStringToTerminal("\r\n", 0);
+					printStringToTerminal("Course\t\tSpeed (MPH)", 2);
+					printFloatToTerminal(course, 1);
+					printFloatToTerminal(speed, 2);
+					if (chipDetect()) {
+						printStringToTerminal("\r\n*Logging to SD Card*", 2);
+					}
     			}
-//<- DEBUG*/
 
     			//
     			// Check if SD card is present and write data if true.
@@ -477,8 +671,12 @@ int gpsData(void) {
     			free(nsIndicator);
     			free(ewIndicator);
     			free(date);
+    			latitude = 0;
+    			longitude = 0;
+    			speed = 0;
+    			course = 0;
 
-    			return 0;
+    			return 1;
     		}
     		else if ((readingData == true) && (UARTreadChar != ',')){
     			sentence[j][k] = UARTreadChar;
@@ -492,5 +690,5 @@ int gpsData(void) {
     	} // End if chars available
     } // end while
 
-    return -1;
+    return 0; // Should never get here
 }
