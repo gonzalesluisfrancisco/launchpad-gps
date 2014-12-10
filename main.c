@@ -70,7 +70,7 @@ uint32_t logComplete = 0;
 
 //*****************************************************************************
 //
-//! This is the Pulse Per Second interrupt handler.
+//! This is the Pulse Per Second (PPS) interrupt handler.
 //! The updateCounter is incremented on each Pulse per second call, if equal to
 //! the update rate, the GPS data is parsed and logged.
 //
@@ -326,6 +326,17 @@ int main(void) {
 	    // Configure the module clock source.
 	    //
 	    HibernateClockConfig(HIBERNATE_OSC_LOWDRIVE);
+
+    	//
+    	// Enable interrupt to fire GPS read/write on next PPS signal.
+    	//
+    	IntEnable(INT_GPIOK);
+
+    	//
+    	// Spin here waiting for a PPS signal
+    	//
+    	while (!logComplete);
+    	logComplete = 0;
 	}
 
 	//
