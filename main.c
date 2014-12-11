@@ -228,7 +228,7 @@ int main(void) {
 	GPIOPinConfigure(GPIO_PD2_SSI2FSS);
 	GPIOPinConfigure(GPIO_PD3_SSI2CLK);
 
-	// SD Chip Detect (CD) - weak pull-up input
+	// SD Card Detect (CD) - weak pull-up input
 	GPIOPadConfigSet(GPIO_PORTK_BASE, GPIO_PIN_3, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
 
 	// Debug UART output config
