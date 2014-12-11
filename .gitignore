@@ -1,1 +1,6 @@
 Debug/
+targetConfigs/
+
+# Ignore all dotfiles except .gitignore
+.*
+!/.gitignore
