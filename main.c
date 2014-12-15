@@ -20,14 +20,14 @@
 #include "third_party/fatfs/src/ff.h"
 #include "third_party/fatfs/src/diskio.h"
 
-//**********************************
+//*****************************************************************************
 //! Function Definitions
- //**********************************
+//*****************************************************************************
 int printStringToTerminal(char *stringToPrint, int delimiter);
 int printFloatToTerminal(float floatToPrint, int delimiter);
 int logToSD(char *inTimestamp, char *inDate, float inLatitude, float inLongitude, float inSpeed, float inCourse);
 float convertCoordinate(float inCoordinate, const char *direction);
-int chipDetect(void);
+int cardDetect(void);
 int gpsData(void);
 void lowPowerMode(int delaySeconds);
 
@@ -52,7 +52,7 @@ uint32_t g_ui32SysClock;
 
 //*****************************************************************************
 //
-//! The update rate and current pulse count
+//! Global update rate and current pulse count
 //! Update rate = updateRate+1
 //
 //*****************************************************************************
@@ -61,9 +61,10 @@ volatile uint32_t updateCounter = 0;
 
 //*****************************************************************************
 //
-//! Data to to be saved prior to hibernation
+//! Global log status indicators
 //! lowPowerOn = 1 if low power mode is enabled (default); 0 if not.
 //! logComplete =  Low Power Mode status (set after PPS interrupt fires)
+//
 //*****************************************************************************
 uint32_t lowPowerOn = 1;
 uint32_t logComplete = 0;
@@ -107,7 +108,7 @@ void PortKIntHandler(void) {
 			}
 		}
 	}
-}
+} // End function PortKIntHandler
 
 //*****************************************************************************
 //
@@ -116,7 +117,8 @@ void PortKIntHandler(void) {
 //!	data is parsed and logged.
 //!
 //! If the Wake button is pressed, low power mode is disabled.
-//! A reset is required to renable low power mode after Wake has been pressed.
+//! A reset/power cycle is required to re-enable low power mode after Wake has
+//! been pressed.
 //
 //*****************************************************************************
 void lowPowerMode(int delaySeconds) {
@@ -164,7 +166,7 @@ void lowPowerMode(int delaySeconds) {
     for(;;)
     {
     }
-}
+} // End function lowPowerMode
 
 
 int main(void) {
@@ -205,7 +207,7 @@ int main(void) {
 	GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
 	//
-	// SD Chip Detect (PK3) and GPS Pulse Per Second (PK2)
+	// SD Card Detect (PK3) and GPS Pulse Per Second (PK2)
 	//
 	GPIOPinTypeGPIOInput(GPIO_PORTK_BASE, GPIO_PIN_2|GPIO_PIN_3);
 	// Pulse Per Second input pin config as weak pull-down
@@ -363,7 +365,8 @@ int main(void) {
 	        }
 	    }
 	}
-}
+} // End function main
+
 
 //*****************************************************************************
 //
@@ -479,17 +482,15 @@ int logToSD(char *inTimestamp, char *inDate, float inLatitude,
     }
     else {
     	//
-    	// Open/create file and append data to the end.
-    	//
-    	f_open(&g_sFileObject, "/gps_log.txt", FA_WRITE | FA_OPEN_ALWAYS);
+    	// f_open: Open/create file.
+    	// f_lseek: Move pointer to end of file
+    	// f_write: Write to file
+        // f_close: Close file
+        //
+        f_open(&g_sFileObject, "/gps_log.txt", FA_WRITE | FA_OPEN_ALWAYS);
     	f_lseek(&g_sFileObject, f_size(&g_sFileObject));
     	f_write(&g_sFileObject, logOutputString, ustrlen(logOutputString), &bw);
     	f_close(&g_sFileObject);
-		if (bw == ustrlen(logOutputString)) {
-			//
-			// TODO: add an indicator for successful SD write
-			//
-		}
     }
 
     //
@@ -498,7 +499,7 @@ int logToSD(char *inTimestamp, char *inDate, float inLatitude,
     f_mount(0, NULL);
 
     return 0;
-}
+} // End function logToSD
 
 //*****************************************************************************
 //
@@ -524,7 +525,7 @@ float convertCoordinate(float inCoordinate, const char *direction) {
     else {
         return outputCoordinate;
     }
-}
+} // End function convertCoordinate
 
 //*****************************************************************************
 //
@@ -537,20 +538,20 @@ void SysTickHandler(void) {
     // Call the FatFs tick timer.
     //
     disk_timerproc();
-}
+} // End function SysTickHandler
 
 //*****************************************************************************
 //
-//! This reads the Chip Detect pin of the SD card and returns the state.
+//! This reads the Card Detect pin of the SD card and returns the state.
 //! Function returns 1 if card is present, returns 0 if not.
 //
 //*****************************************************************************
-int chipDetect(void) {
-	volatile uint32_t chipDetectStatus = 0; // SD Chip Detect Pin
+int cardDetect(void) {
+	volatile uint32_t cardDetectStatus = 0; // SD Card Detect Pin
 
-	chipDetectStatus = GPIOPinRead(GPIO_PORTK_BASE, GPIO_PIN_3);
-	return chipDetectStatus;
-}
+	cardDetectStatus = GPIOPinRead(GPIO_PORTK_BASE, GPIO_PIN_3);
+	return cardDetectStatus;
+} // End function
 
 //*****************************************************************************
 //
@@ -572,9 +573,7 @@ int gpsData(void) {
     uint32_t	k = 0; 	// NMEA chars
 
     while (readComplete != true) {
-    	//GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1, 0x00);
     	if (UARTCharsAvail(UART7_BASE)) {
-    		//GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0xFF);
     		UARTreadChar = UARTCharGet(UART7_BASE);
 
     		if ((parsingId == false) && (UARTreadChar == '$')) {
@@ -620,12 +619,12 @@ int gpsData(void) {
     		    }
 
     			//
-    			// Process latitude
+    			// Convert latitude to decimal degrees
     			//
     			latitude = convertCoordinate(ustrtof(sentence[2], NULL), nsIndicator);
 
     			//
-    			// Process longitude
+    			// Convert longitude to decimal degrees
     			//
     			longitude = convertCoordinate(ustrtof(sentence[4], NULL), ewIndicator);
 
@@ -663,7 +662,8 @@ int gpsData(void) {
 					printStringToTerminal("Course\t\tSpeed (MPH)", 2);
 					printFloatToTerminal(course, 1);
 					printFloatToTerminal(speed, 2);
-					if (chipDetect()) {
+                    // Check if an SD card is inserted and indicate on term
+					if (cardDetect()) {
 						printStringToTerminal("\r\n*Logging to SD Card*", 2);
 					}
     			}
@@ -671,11 +671,13 @@ int gpsData(void) {
     			//
     			// Check if SD card is present and write data if true.
     			//
-    			if (chipDetect()) {
+    			if (cardDetect()) {
     				logToSD(timestamp, date, latitude, longitude, speed, course);
     			}
 
+                //
     			// Deallocate memory used by strdup function
+                //
     			free(timestamp);
     			free(status);
     			free(nsIndicator);
@@ -684,10 +686,16 @@ int gpsData(void) {
 
     			return 1;
     		}
+            //
+            // Parse GPS char received
+            //
     		else if ((readingData == true) && (UARTreadChar != ',')){
     			sentence[j][k] = UARTreadChar;
     			k++;
     		}
+            //
+            // Parse GPS char received
+            //
     		else if ((readingData == true) && (UARTreadChar == ',')){
     			sentence[j][k] = '\0';
     			j++;
@@ -697,4 +705,4 @@ int gpsData(void) {
     } // end while
 
     return 0; // Should never get here
-}
+} // End function
