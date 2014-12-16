@@ -551,7 +551,7 @@ int cardDetect(void) {
 
 	cardDetectStatus = GPIOPinRead(GPIO_PORTK_BASE, GPIO_PIN_3);
 	return cardDetectStatus;
-} // End function
+} // End function cardDetect
 
 //*****************************************************************************
 //
@@ -705,4 +705,4 @@ int gpsData(void) {
     } // end while
 
     return 0; // Should never get here
-} // End function
+} // End function gpsData
