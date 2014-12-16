@@ -30,6 +30,7 @@ float convertCoordinate(float inCoordinate, const char *direction);
 int cardDetect(void);
 int gpsData(void);
 void lowPowerMode(int delaySeconds);
+int ppsDataLog(void);
 
 //*****************************************************************************
 //! Global Definitions
@@ -279,38 +280,18 @@ int main(void) {
 	    // Wake was due to RTC match.
 	    //
 	    if(ui32Status & HIBERNATE_INT_RTC_MATCH_0) {
-	    	//
-	    	// Enable interrupt to fire GPS read/write on next PPS signal.
-	    	//
-	    	IntEnable(INT_GPIOK);
-
-	    	//
-	    	// Spin here waiting for a PPS signal
-	    	//
-	    	while (!logComplete);
-	    	logComplete = 0;
+			//
+			// TODO: add IMU check
+			//
 	    }
-
 	    //
 	    // Wake was due to the External Wake pin.
 	    //
 	    else if(ui32Status & HIBERNATE_INT_PIN_WAKE) {
 	    	//
-	    	// Enable interrupt to fire GPS read/write on next PPS signal.
-	    	//
-	    	IntEnable(INT_GPIOK);
-
-	    	//
-	    	// Spin here waiting for a PPS signal
-	    	//
-	    	while (!logComplete);
-	    	logComplete = 0;
-
-	    	//
 	    	// Switch off low power mode
 	    	//
 	    	lowPowerOn = 0;
-
 	    }
 	}
 
@@ -328,18 +309,12 @@ int main(void) {
 	    // Configure the module clock source.
 	    //
 	    HibernateClockConfig(HIBERNATE_OSC_LOWDRIVE);
-
-    	//
-    	// Enable interrupt to fire GPS read/write on next PPS signal.
-    	//
-    	IntEnable(INT_GPIOK);
-
-    	//
-    	// Spin here waiting for a PPS signal
-    	//
-    	while (!logComplete);
-    	logComplete = 0;
 	}
+
+	//
+	// Enable PPS for a single data log. Interrupt on next PPS logic high.
+	//
+	ppsDataLog();
 
 	//
 	// Enable RTC mode.
@@ -706,3 +681,27 @@ int gpsData(void) {
 
     return 0; // Should never get here
 } // End function gpsData
+
+//*****************************************************************************
+//
+//! This enables the PPS Port K GPIO interrupt then waits for a PPS interrupt
+//! and subsequent data log.
+//
+//*****************************************************************************
+int ppsDataLog(void) {
+	//
+	// Enable interrupt to fire GPS read/write on next PPS signal.
+	//
+	IntEnable(INT_GPIOK);
+
+	//
+	// Spin here waiting for a PPS signal
+	//
+	while (!logComplete);
+	//
+	// Reset the log indicator
+	//
+	logComplete = 0;
+
+	return 0;
+}
