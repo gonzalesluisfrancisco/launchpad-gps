@@ -11,6 +11,7 @@
 [PMTK Command Packet Reference](https://www.adafruit.com/datasheets/PMTK_A11.pdf)
 
 ##Pin Connections
+
 Module        |   Connector-Pin | Port and Pin | Function
 ------------------------------------------------------------
 GPS UART      | X1-21           | PortC Pin 4  | RX
