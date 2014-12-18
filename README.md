@@ -13,7 +13,7 @@
 ##Pin Connections
 
 Module        |   Connector-Pin | Port and Pin | Function
-------------------------------------------------------------
+--------------|-----------------|--------------|------------
 GPS UART      | X1-21           | PortC Pin 4  | RX
 GPS UART      | X1-23           | PortC Pin 5  | TX
 GPS UART      | X1-30           | PortK Pin 2  | PPS (Pulse Per Second)
