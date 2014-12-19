@@ -1,6 +1,8 @@
 #TM4C1294 Connected LaunchPad GPS Data Logger
 ##### TM4C1294NCPDT MCU: 120MHz 32-bit ARM Cortex-M4
 
+[Schematics and PCB Layout](https://upverter.com/mitchg45/cc48ca266b1d3310/GPS-Logger-Boosterpack-80-Pin/)
+
 ##Pin Connections
 
 Module  |   Connector (Pin) | Port and Pin | Peripheral | Function
