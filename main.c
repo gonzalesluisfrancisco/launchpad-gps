@@ -78,37 +78,37 @@ uint32_t logComplete = 0;
 //
 //*****************************************************************************
 void PortKIntHandler(void) {
-	uint32_t intStatus = 0;
+    uint32_t intStatus = 0;
 
-	//
-	// Get the current interrupt status for Port K
-	//
-	intStatus = GPIOIntStatus(GPIO_PORTK_BASE,true);
+    //
+    // Get the current interrupt status for Port K
+    //
+    intStatus = GPIOIntStatus(GPIO_PORTK_BASE,true);
 
-	//
-	// Clear the set interrupts for Port K
-	//
-	GPIOIntClear(GPIO_PORTK_BASE,intStatus);
+    //
+    // Clear the set interrupts for Port K
+    //
+    GPIOIntClear(GPIO_PORTK_BASE,intStatus);
 
-	//
-	// Execute code for PK2 interrupt
-	//
-	if((intStatus & GPIO_INT_PIN_2) == GPIO_INT_PIN_2){
-		if (updateRate == updateCounter++) {
-			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0x02);
-			gpsData();
-			GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0x00);
-			updateCounter = 0;
+    //
+    // Execute code for PK2 interrupt
+    //
+    if((intStatus & GPIO_INT_PIN_2) == GPIO_INT_PIN_2){
+        if (updateRate == updateCounter++) {
+            GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0x02);
+            gpsData();
+            GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0x00);
+            updateCounter = 0;
 
-			//
-			// Disable PPS interrupt after one read if in low power mode
-			//
-			if (lowPowerOn == 1) {
-				IntDisable(INT_GPIOK);
-				logComplete = 1;
-			}
-		}
-	}
+            //
+            // Disable PPS interrupt after one read if in low power mode
+            //
+            if (lowPowerOn == 1) {
+                IntDisable(INT_GPIOK);
+                logComplete = 1;
+            }
+        }
+    }
 } // End function PortKIntHandler
 
 //*****************************************************************************
@@ -171,175 +171,175 @@ void lowPowerMode(int delaySeconds) {
 
 
 int main(void) {
-	// Status of Hibernation module
-	uint32_t ui32Status = 0;
-	// Length of time to hibernate
-	uint32_t hibernationTime = 600;
+    // Status of Hibernation module
+    uint32_t ui32Status = 0;
+    // Length of time to hibernate
+    uint32_t hibernationTime = 600;
 
-	g_ui32SysClock = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
-			SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
-			SYSCTL_CFG_VCO_480), 120000000);
+    g_ui32SysClock = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
+            SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
+            SYSCTL_CFG_VCO_480), 120000000);
 
 
-	//*************************************************************************
-	//! I/O config and setup
-	//*************************************************************************
+    //*************************************************************************
+    //! I/O config and setup
+    //*************************************************************************
 
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);	// UART
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART7);	// UART
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);	// UART0
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOC);	// UART7
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);	// SSI
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);	// GPIO
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI2);		// SSI
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOK);	// GPIO
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_HIBERNATE);// Hibernation
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);	// UART
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART7);	// UART
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);	// UART0
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOC);	// UART7
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);	// SSI
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);	// GPIO
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI2);		// SSI
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOK);	// GPIO
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_HIBERNATE);// Hibernation
 
-	// UART0 and UART7
-	GPIOPinConfigure(GPIO_PA0_U0RX);
-	GPIOPinConfigure(GPIO_PC4_U7RX);
-	GPIOPinConfigure(GPIO_PA1_U0TX);
-	GPIOPinConfigure(GPIO_PC5_U7TX);
+    // UART0 and UART7
+    GPIOPinConfigure(GPIO_PA0_U0RX);
+    GPIOPinConfigure(GPIO_PC4_U7RX);
+    GPIOPinConfigure(GPIO_PA1_U0TX);
+    GPIOPinConfigure(GPIO_PC5_U7TX);
 
-	GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
-	GPIOPinTypeUART(GPIO_PORTC_BASE, GPIO_PIN_4 | GPIO_PIN_5);
+    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+    GPIOPinTypeUART(GPIO_PORTC_BASE, GPIO_PIN_4 | GPIO_PIN_5);
 
-	// LED indicators
-	GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+    // LED indicators
+    GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
-	//
-	// SD Card Detect (PK3) and GPS Pulse Per Second (PK2)
-	//
-	GPIOPinTypeGPIOInput(GPIO_PORTK_BASE, GPIO_PIN_2|GPIO_PIN_3);
-	// Pulse Per Second input pin config as weak pull-down
-	GPIOPadConfigSet(GPIO_PORTK_BASE,GPIO_PIN_2,GPIO_STRENGTH_2MA,GPIO_PIN_TYPE_STD_WPD);
-	// Pulse Per Second input pin config as rising edge triggered interrupt
-	GPIOIntTypeSet(GPIO_PORTK_BASE,GPIO_PIN_2,GPIO_RISING_EDGE);
-	// Register Port K as interrupt
-	GPIOIntRegister(GPIO_PORTK_BASE, PortKIntHandler);
-	// Enable Port K pin 2 interrupt
-	GPIOIntEnable(GPIO_PORTK_BASE, GPIO_INT_PIN_2);
-	//
-	// Disable PPS pin interrupt by default
-	//
-	if(IntIsEnabled(INT_GPIOK)) {
-			IntDisable(INT_GPIOK);
-	}
+    //
+    // SD Card Detect (PK3) and GPS Pulse Per Second (PK2)
+    //
+    GPIOPinTypeGPIOInput(GPIO_PORTK_BASE, GPIO_PIN_2|GPIO_PIN_3);
+    // Pulse Per Second input pin config as weak pull-down
+    GPIOPadConfigSet(GPIO_PORTK_BASE,GPIO_PIN_2,GPIO_STRENGTH_2MA,GPIO_PIN_TYPE_STD_WPD);
+    // Pulse Per Second input pin config as rising edge triggered interrupt
+    GPIOIntTypeSet(GPIO_PORTK_BASE,GPIO_PIN_2,GPIO_RISING_EDGE);
+    // Register Port K as interrupt
+    GPIOIntRegister(GPIO_PORTK_BASE, PortKIntHandler);
+    // Enable Port K pin 2 interrupt
+    GPIOIntEnable(GPIO_PORTK_BASE, GPIO_INT_PIN_2);
+    //
+    // Disable PPS pin interrupt by default
+    //
+    if(IntIsEnabled(INT_GPIOK)) {
+            IntDisable(INT_GPIOK);
+    }
 
-	GPIOPinConfigure(GPIO_PD0_SSI2XDAT1);
-	GPIOPinConfigure(GPIO_PD1_SSI2XDAT0);
-	GPIOPinConfigure(GPIO_PD2_SSI2FSS);
-	GPIOPinConfigure(GPIO_PD3_SSI2CLK);
+    GPIOPinConfigure(GPIO_PD0_SSI2XDAT1);
+    GPIOPinConfigure(GPIO_PD1_SSI2XDAT0);
+    GPIOPinConfigure(GPIO_PD2_SSI2FSS);
+    GPIOPinConfigure(GPIO_PD3_SSI2CLK);
 
-	// SD Card Detect (CD) - weak pull-up input
-	GPIOPadConfigSet(GPIO_PORTK_BASE, GPIO_PIN_3, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
+    // SD Card Detect (CD) - weak pull-up input
+    GPIOPadConfigSet(GPIO_PORTK_BASE, GPIO_PIN_3, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
 
-	// Debug UART output config
-	UARTConfigSetExpClk(UART0_BASE, g_ui32SysClock, 115200,
-			(UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
+    // Debug UART output config
+    UARTConfigSetExpClk(UART0_BASE, g_ui32SysClock, 115200,
+            (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
 
-	// GPS UART input config
-	UARTConfigSetExpClk(UART7_BASE, g_ui32SysClock, 9600,
-			(UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
+    // GPS UART input config
+    UARTConfigSetExpClk(UART7_BASE, g_ui32SysClock, 9600,
+            (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
 
-	//
-	// Configure SysTick for a 100Hz interrupt.
-	//
-	SysTickPeriodSet(g_ui32SysClock / 100);
-	SysTickIntEnable();
-	SysTickEnable();
+    //
+    // Configure SysTick for a 100Hz interrupt.
+    //
+    SysTickPeriodSet(g_ui32SysClock / 100);
+    SysTickIntEnable();
+    SysTickEnable();
 
-	//
-	// Floating point enable
-	//
-	FPUEnable();
-	FPULazyStackingEnable();
+    //
+    // Floating point enable
+    //
+    FPUEnable();
+    FPULazyStackingEnable();
 
-	//
-	// Clear user LEDs
-	//
-	GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1, 0x00);
+    //
+    // Clear user LEDs
+    //
+    GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1, 0x00);
 
-	//*************************************************************************
-	//! Hibernation mode checks and setup
-	//*************************************************************************
+    //*************************************************************************
+    //! Hibernation mode checks and setup
+    //*************************************************************************
 
-	//
-	// Check to see if Hibernation module is already active, which could mean
-	// that the processor is waking from a hibernation.
-	//
-	if(HibernateIsActive()) {
-	    //
-	    // Read the status bits to see what caused the wake.  Clear the wake
-	    // source so that the device can be put into hibernation again.
-	    //
-	    ui32Status = HibernateIntStatus(0);
-	    HibernateIntClear(ui32Status);
+    //
+    // Check to see if Hibernation module is already active, which could mean
+    // that the processor is waking from a hibernation.
+    //
+    if(HibernateIsActive()) {
+        //
+        // Read the status bits to see what caused the wake.  Clear the wake
+        // source so that the device can be put into hibernation again.
+        //
+        ui32Status = HibernateIntStatus(0);
+        HibernateIntClear(ui32Status);
 
-	    //
-	    // Wake was due to RTC match.
-	    //
-	    if(ui32Status & HIBERNATE_INT_RTC_MATCH_0) {
-			//
-			// TODO: add IMU check
-			//
-	    }
-	    //
-	    // Wake was due to the External Wake pin.
-	    //
-	    else if(ui32Status & HIBERNATE_INT_PIN_WAKE) {
-	    	//
-	    	// Switch off low power mode
-	    	//
-	    	lowPowerOn = 0;
-	    }
-	}
+        //
+        // Wake was due to RTC match.
+        //
+        if(ui32Status & HIBERNATE_INT_RTC_MATCH_0) {
+            //
+            // TODO: add IMU check
+            //
+        }
+        //
+        // Wake was due to the External Wake pin.
+        //
+        else if(ui32Status & HIBERNATE_INT_PIN_WAKE) {
+            //
+            // Switch off low power mode
+            //
+            lowPowerOn = 0;
+        }
+    }
 
-	//
-	// Configure Hibernate module clock.
-	//
-	HibernateEnableExpClk(g_ui32SysClock);
+    //
+    // Configure Hibernate module clock.
+    //
+    HibernateEnableExpClk(g_ui32SysClock);
 
-	//
-	// If the wake was not due to the above sources, then it was a system
-	// reset.
-	//
-	if(!(ui32Status & (HIBERNATE_INT_PIN_WAKE | HIBERNATE_INT_RTC_MATCH_0))) {
-	    //
-	    // Configure the module clock source.
-	    //
-	    HibernateClockConfig(HIBERNATE_OSC_LOWDRIVE);
-	}
+    //
+    // If the wake was not due to the above sources, then it was a system
+    // reset.
+    //
+    if(!(ui32Status & (HIBERNATE_INT_PIN_WAKE | HIBERNATE_INT_RTC_MATCH_0))) {
+        //
+        // Configure the module clock source.
+        //
+        HibernateClockConfig(HIBERNATE_OSC_LOWDRIVE);
+    }
 
-	//
-	// Enable PPS for a single data log. Interrupt on next PPS logic high.
-	//
-	ppsDataLog();
+    //
+    // Enable PPS for a single data log. Interrupt on next PPS logic high.
+    //
+    ppsDataLog();
 
-	//
-	// Enable RTC mode.
-	//
-	HibernateRTCEnable();
+    //
+    // Enable RTC mode.
+    //
+    HibernateRTCEnable();
 
-	//
-	// Loop forever
-	//
-	while(1) {
-	    //
-	    // If low power mode is set (default), hibernate again
-	    // If not, spin in nested while(1) for faster updates from PPS pin ints.
-	    //
-	    if(lowPowerOn) {
-	    	lowPowerMode(hibernationTime);
-	    }
-	    else {
-	    	if(!IntIsEnabled(INT_GPIOK)) {
-	    			IntEnable(INT_GPIOK);
-	    	}
-	        while(1) {
-	        }
-	    }
-	}
+    //
+    // Loop forever
+    //
+    while(1) {
+        //
+        // If low power mode is set (default), hibernate again
+        // If not, spin in nested while(1) for faster updates from PPS pin ints.
+        //
+        if(lowPowerOn) {
+            lowPowerMode(hibernationTime);
+        }
+        else {
+            if(!IntIsEnabled(INT_GPIOK)) {
+                    IntEnable(INT_GPIOK);
+            }
+            while(1) {
+            }
+        }
+    }
 } // End function main
 
 
@@ -352,20 +352,20 @@ int main(void) {
 //
 //*****************************************************************************
 int printStringToTerminal(char *stringToPrint, int delimiter) {
-	uint8_t i = 0;
-	while (stringToPrint[i] != '\0') {
-		UARTCharPut(UART0_BASE, stringToPrint[i++]);
-	}
+    uint8_t i = 0;
+    while (stringToPrint[i] != '\0') {
+        UARTCharPut(UART0_BASE, stringToPrint[i++]);
+    }
 
-	if (delimiter == 1) {
-		UARTCharPut(UART0_BASE, '\t');
-	}
-	else if (delimiter == 2) {
-		UARTCharPut(UART0_BASE, '\r');
-		UARTCharPut(UART0_BASE, '\n');
-	}
+    if (delimiter == 1) {
+        UARTCharPut(UART0_BASE, '\t');
+    }
+    else if (delimiter == 2) {
+        UARTCharPut(UART0_BASE, '\r');
+        UARTCharPut(UART0_BASE, '\n');
+    }
 
-	return 0;
+    return 0;
 } // End function printStringToTerminal
 
 
@@ -378,23 +378,23 @@ int printStringToTerminal(char *stringToPrint, int delimiter) {
 //
 //*****************************************************************************
 int printFloatToTerminal(float floatToPrint, int delimiter) {
-	uint8_t i = 0;
-	char stringToPrint[80];
+    uint8_t i = 0;
+    char stringToPrint[80];
 
-	sprintf(stringToPrint, "%f", floatToPrint);
-	while (stringToPrint[i] != '\0') {
-		UARTCharPut(UART0_BASE, stringToPrint[i++]);
-	}
+    sprintf(stringToPrint, "%f", floatToPrint);
+    while (stringToPrint[i] != '\0') {
+        UARTCharPut(UART0_BASE, stringToPrint[i++]);
+    }
 
-	if (delimiter == 1) {
-		UARTCharPut(UART0_BASE, '\t');
-	}
-	else if (delimiter == 2) {
-		UARTCharPut(UART0_BASE, '\r');
-		UARTCharPut(UART0_BASE, '\n');
-	}
+    if (delimiter == 1) {
+        UARTCharPut(UART0_BASE, '\t');
+    }
+    else if (delimiter == 2) {
+        UARTCharPut(UART0_BASE, '\r');
+        UARTCharPut(UART0_BASE, '\n');
+    }
 
-	return 0;
+    return 0;
 } // End function printFloatToTerminal
 
 
@@ -412,60 +412,60 @@ int printFloatToTerminal(float floatToPrint, int delimiter) {
 //*****************************************************************************
 
 int logToSD(char *inTimestamp, char *inDate, float inLatitude,
-			float inLongitude, float inSpeed, float inCourse) {
+            float inLongitude, float inSpeed, float inCourse) {
 
-	FRESULT iFResult;   // File function return code
-	UINT 	bw;         // amount of bytes written to SD
-	char data[6][30] = {};
-	char logOutputString[100] = {};
-	uint8_t i = 0;
-	uint8_t j = 0;
-	uint8_t k = 0;
+    FRESULT iFResult;   // File function return code
+    UINT 	bw;         // amount of bytes written to SD
+    char data[6][30] = {};
+    char logOutputString[100] = {};
+    uint8_t i = 0;
+    uint8_t j = 0;
+    uint8_t k = 0;
 
-	strcpy(data[0], inTimestamp);
-	strcpy(data[1], inDate);
-	sprintf(data[2], "%f", inLatitude);
-	sprintf(data[3], "%f", inLongitude);
-	sprintf(data[4], "%f", inSpeed);
-	sprintf(data[5], "%f", inCourse);
+    strcpy(data[0], inTimestamp);
+    strcpy(data[1], inDate);
+    sprintf(data[2], "%f", inLatitude);
+    sprintf(data[3], "%f", inLongitude);
+    sprintf(data[4], "%f", inSpeed);
+    sprintf(data[5], "%f", inCourse);
 
-	//GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0xFF);
+    //GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0xFF);
 
-	//
-	// Create a tab delimited string to write to SD card.
-	//
-	for (i = 0; i < 6; i++) {
-	    j = 0;
-		while (data[i][j] != '\0') {
-			logOutputString[k++] = data[i][j++];
-		}
-		if (i != 5) {
-			logOutputString[k++] = '\t';
-		}
-		else {
-			logOutputString[k] = '\n';
-			logOutputString[k + 1] = '\0';
-		}
-	}
+    //
+    // Create a tab delimited string to write to SD card.
+    //
+    for (i = 0; i < 6; i++) {
+        j = 0;
+        while (data[i][j] != '\0') {
+            logOutputString[k++] = data[i][j++];
+        }
+        if (i != 5) {
+            logOutputString[k++] = '\t';
+        }
+        else {
+            logOutputString[k] = '\n';
+            logOutputString[k + 1] = '\0';
+        }
+    }
 
     //
     // Mount the file system, using logical disk 0 and write to SD card
     //
-	iFResult = f_mount(0, &g_sFatFs);
+    iFResult = f_mount(0, &g_sFatFs);
     if (iFResult != FR_OK) {
-    	// TODO: add output to error_log.txt file
+        // TODO: add output to error_log.txt file
     }
     else {
-    	//
-    	// f_open: Open/create file.
-    	// f_lseek: Move pointer to end of file
-    	// f_write: Write to file
+        //
+        // f_open: Open/create file.
+        // f_lseek: Move pointer to end of file
+        // f_write: Write to file
         // f_close: Close file
         //
         f_open(&g_sFileObject, "/gps_log.txt", FA_WRITE | FA_OPEN_ALWAYS);
-    	f_lseek(&g_sFileObject, f_size(&g_sFileObject));
-    	f_write(&g_sFileObject, logOutputString, ustrlen(logOutputString), &bw);
-    	f_close(&g_sFileObject);
+        f_lseek(&g_sFileObject, f_size(&g_sFileObject));
+        f_write(&g_sFileObject, logOutputString, ustrlen(logOutputString), &bw);
+        f_close(&g_sFileObject);
     }
 
     //
@@ -522,10 +522,10 @@ void SysTickHandler(void) {
 //
 //*****************************************************************************
 int cardDetect(void) {
-	volatile uint32_t cardDetectStatus = 0; // SD Card Detect Pin
+    volatile uint32_t cardDetectStatus = 0; // SD Card Detect Pin
 
-	cardDetectStatus = GPIOPinRead(GPIO_PORTK_BASE, GPIO_PIN_3);
-	return cardDetectStatus;
+    cardDetectStatus = GPIOPinRead(GPIO_PORTK_BASE, GPIO_PIN_3);
+    return cardDetectStatus;
 } // End function cardDetect
 
 //*****************************************************************************
@@ -548,135 +548,135 @@ int gpsData(void) {
     uint32_t	k = 0; 	// NMEA chars
 
     while (readComplete != true) {
-    	if (UARTCharsAvail(UART7_BASE)) {
-    		UARTreadChar = UARTCharGet(UART7_BASE);
+        if (UARTCharsAvail(UART7_BASE)) {
+            UARTreadChar = UARTCharGet(UART7_BASE);
 
-    		if ((parsingId == false) && (UARTreadChar == '$')) {
-    			i = 0;
-    			parsingId = true;
-    			readingData = false;
-    		}
-    		else if ((parsingId == true) && (UARTreadChar == ',')) {
-    			idBuffer[i] = '\0';
-    			i = 0;
-    			parsingId = false;
+            if ((parsingId == false) && (UARTreadChar == '$')) {
+                i = 0;
+                parsingId = true;
+                readingData = false;
+            }
+            else if ((parsingId == true) && (UARTreadChar == ',')) {
+                idBuffer[i] = '\0';
+                i = 0;
+                parsingId = false;
 
-    			if (strcmp(idBuffer, "GPRMC") == 0) {
-    				j = 0;
-    				k = 0;
-    				readingData = true;
-    			}
-    			else {
-    				readingData = false;
-    			}
-    		}
-    		else if ((parsingId == true) && (UARTreadChar != ',')) {
-    			idBuffer[i] = UARTreadChar;
-    			i++;
-    		}
-    		else if ((readingData == true) && (UARTreadChar == '\r')) {
-    			sentence[j][k] = '\0';
+                if (strcmp(idBuffer, "GPRMC") == 0) {
+                    j = 0;
+                    k = 0;
+                    readingData = true;
+                }
+                else {
+                    readingData = false;
+                }
+            }
+            else if ((parsingId == true) && (UARTreadChar != ',')) {
+                idBuffer[i] = UARTreadChar;
+                i++;
+            }
+            else if ((readingData == true) && (UARTreadChar == '\r')) {
+                sentence[j][k] = '\0';
 
-    			//
-    			// Copy data which will remain strings into named variables
-    			//
-    			char *timestamp = strdup(sentence[0]);
-    			char *status = strdup(sentence[1]);
-    			char *nsIndicator = strdup(sentence[3]);
-    			char *ewIndicator = strdup(sentence[5]);
-    			char *date = strdup(sentence[8]);
+                //
+                // Copy data which will remain strings into named variables
+                //
+                char *timestamp = strdup(sentence[0]);
+                char *status = strdup(sentence[1]);
+                char *nsIndicator = strdup(sentence[3]);
+                char *ewIndicator = strdup(sentence[5]);
+                char *date = strdup(sentence[8]);
 
-    		    //
-    			// Stop processing and return 0 if data invalid
-    			//
-    			if (strcmp(status, "V") == 0) {
-    		        return 0;
-    		    }
+                //
+                // Stop processing and return 0 if data invalid
+                //
+                if (strcmp(status, "V") == 0) {
+                    return 0;
+                }
 
-    			//
-    			// Convert latitude to decimal degrees
-    			//
-    			latitude = convertCoordinate(ustrtof(sentence[2], NULL), nsIndicator);
+                //
+                // Convert latitude to decimal degrees
+                //
+                latitude = convertCoordinate(ustrtof(sentence[2], NULL), nsIndicator);
 
-    			//
-    			// Convert longitude to decimal degrees
-    			//
-    			longitude = convertCoordinate(ustrtof(sentence[4], NULL), ewIndicator);
+                //
+                // Convert longitude to decimal degrees
+                //
+                longitude = convertCoordinate(ustrtof(sentence[4], NULL), ewIndicator);
 
-    			//
-    			// Convert speed from knots to mph
-    			//
-    			speed = 1.15078 * ustrtof(sentence[6], NULL);
-    			course = ustrtof(sentence[7], NULL);
+                //
+                // Convert speed from knots to mph
+                //
+                speed = 1.15078 * ustrtof(sentence[6], NULL);
+                course = ustrtof(sentence[7], NULL);
 
-    			//****************************************************
-    			//! Data Debug/Display UART terminal movement
-    			//!
-    			//! (ANSI/VT100 Terminal Control Escape Sequences)
-    			//! Adapted from the following: http://goo.gl/s43voj
-    			//****************************************************
-    			//
-    			// Display serial output only if not in low power mode
-    			//
-    			if (!lowPowerOn) {
-					// Initial terminal setup
-					// Clear Terminal
-					printStringToTerminal("\033[2J",0);
-					// Cursor to 0,0
-					printStringToTerminal("\033[0;0H", 0);
-					printStringToTerminal("Time (UTC)", 0);
-					//Cursor to 0,1
-					printStringToTerminal("\033[2;0H", 0);
-					// Print values to the terminal
-					printStringToTerminal(timestamp, 2);
-					printStringToTerminal("\r\n", 0);
-					printStringToTerminal("Latitude\tLongitude", 2);
-					printFloatToTerminal(latitude, 1);
-					printFloatToTerminal(longitude, 2);
-					printStringToTerminal("\r\n", 0);
-					printStringToTerminal("Course\t\tSpeed (MPH)", 2);
-					printFloatToTerminal(course, 1);
-					printFloatToTerminal(speed, 2);
+                //****************************************************
+                //! Data Debug/Display UART terminal movement
+                //!
+                //! (ANSI/VT100 Terminal Control Escape Sequences)
+                //! Adapted from the following: http://goo.gl/s43voj
+                //****************************************************
+                //
+                // Display serial output only if not in low power mode
+                //
+                if (!lowPowerOn) {
+                    // Initial terminal setup
+                    // Clear Terminal
+                    printStringToTerminal("\033[2J",0);
+                    // Cursor to 0,0
+                    printStringToTerminal("\033[0;0H", 0);
+                    printStringToTerminal("Time (UTC)", 0);
+                    //Cursor to 0,1
+                    printStringToTerminal("\033[2;0H", 0);
+                    // Print values to the terminal
+                    printStringToTerminal(timestamp, 2);
+                    printStringToTerminal("\r\n", 0);
+                    printStringToTerminal("Latitude\tLongitude", 2);
+                    printFloatToTerminal(latitude, 1);
+                    printFloatToTerminal(longitude, 2);
+                    printStringToTerminal("\r\n", 0);
+                    printStringToTerminal("Course\t\tSpeed (MPH)", 2);
+                    printFloatToTerminal(course, 1);
+                    printFloatToTerminal(speed, 2);
                     // Check if an SD card is inserted and indicate on term
-					if (cardDetect()) {
-						printStringToTerminal("\r\n*Logging to SD Card*", 2);
-					}
-    			}
-
-    			//
-    			// Check if SD card is present and write data if true.
-    			//
-    			if (cardDetect()) {
-    				logToSD(timestamp, date, latitude, longitude, speed, course);
-    			}
+                    if (cardDetect()) {
+                        printStringToTerminal("\r\n*Logging to SD Card*", 2);
+                    }
+                }
 
                 //
-    			// Deallocate memory used by strdup function
+                // Check if SD card is present and write data if true.
                 //
-    			free(timestamp);
-    			free(status);
-    			free(nsIndicator);
-    			free(ewIndicator);
-    			free(date);
+                if (cardDetect()) {
+                    logToSD(timestamp, date, latitude, longitude, speed, course);
+                }
 
-    			return 1;
-    		}
+                //
+                // Deallocate memory used by strdup function
+                //
+                free(timestamp);
+                free(status);
+                free(nsIndicator);
+                free(ewIndicator);
+                free(date);
+
+                return 1;
+            }
             //
             // Parse GPS char received
             //
-    		else if ((readingData == true) && (UARTreadChar != ',')){
-    			sentence[j][k] = UARTreadChar;
-    			k++;
-    		}
+            else if ((readingData == true) && (UARTreadChar != ',')){
+                sentence[j][k] = UARTreadChar;
+                k++;
+            }
             //
             // Parse GPS char received
             //
-    		else if ((readingData == true) && (UARTreadChar == ',')){
-    			sentence[j][k] = '\0';
-    			j++;
-    			k = 0;
-    		}
-    	} // End if chars available
+            else if ((readingData == true) && (UARTreadChar == ',')){
+                sentence[j][k] = '\0';
+                j++;
+                k = 0;
+            }
+        } // End if chars available
     } // end while
 
     return 0; // Should never get here
@@ -689,19 +689,19 @@ int gpsData(void) {
 //
 //*****************************************************************************
 int ppsDataLog(void) {
-	//
-	// Enable interrupt to fire GPS read/write on next PPS signal.
-	//
-	IntEnable(INT_GPIOK);
+    //
+    // Enable interrupt to fire GPS read/write on next PPS signal.
+    //
+    IntEnable(INT_GPIOK);
 
-	//
-	// Spin here waiting for a PPS signal
-	//
-	while (!logComplete);
-	//
-	// Reset the log indicator
-	//
-	logComplete = 0;
+    //
+    // Spin here waiting for a PPS signal
+    //
+    while (!logComplete);
+    //
+    // Reset the log indicator
+    //
+    logComplete = 0;
 
-	return 0;
+    return 0;
 }
