@@ -3,6 +3,19 @@
 
 [Schematics and PCB Layout](https://upverter.com/mitchg45/cc48ca266b1d3310/GPS-Logger-Boosterpack-80-Pin/)
 
+##Overview
+
+This project combines the Texas Instruments [TM4C1294 Connected LaunchPad](http://www.ti.com/tool/ek-tm4c1294xl) with the [Ultimate GPS Breakout](https://www.adafruit.com/products/746) and [MicroSD card breakout board+](https://www.adafruit.com/product/254), both from from Adafruit Industries. In its current form, the unit logs the following data to a microSD card as a TSV file titled "GPS_LOG.txt".
+* Date
+* Time (UTC)
+* Coordinates (in decimal degrees)
+* Speed (mph)
+* Course
+
+The unit defaults to Low Power Mode when powered on or reset via the Reset button. This mode logs the aforementioned data once every 10 minutes. Normal Mode can be entered by pressing the Wake button. While in Normal Mode, the data is logged once per second. Additionally, while in Normal Mode the data can be viewed by in a serial terminal (115200 baud 8-N-1) by connecting to the Debug microUSB.
+
+This project is still under active development including the Schematics and PCB Layout. 
+
 ##Pin Connections
 
 Module  |   Connector (Pin) | Port and Pin | Peripheral | Function
