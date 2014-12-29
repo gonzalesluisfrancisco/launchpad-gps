@@ -12,7 +12,7 @@ This project combines the Texas Instruments [TM4C1294 Connected LaunchPad](http:
 * Speed (mph)
 * Course
 
-The unit defaults to Low Power Mode when powered on or reset via the Reset button. This mode logs the aforementioned data once every 10 minutes. Normal Mode can be entered by pressing the Wake button. While in Normal Mode, the data is logged once per second. Additionally, while in Normal Mode the data can be viewed by in a serial terminal (115200 baud 8-N-1) by connecting to the Debug microUSB.
+The unit defaults to Low Power Mode when powered on or reset via the Reset button. This mode logs the aforementioned data once every 10 minutes. Normal Mode can be entered by pressing the Wake button. While in Normal Mode, the data is logged once per second. Additionally, while in Normal Mode the data can be viewed via serial terminal (115200 baud 8-N-1) by connecting to the Debug microUSB.
 
 This project is still under active development including the Schematics and PCB Layout. 
 
