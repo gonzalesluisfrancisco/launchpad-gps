@@ -115,7 +115,7 @@ void PortKIntHandler(void) {
 //
 //! This is the hibernate module handler.
 //! When the RTC timer expires, an interrupt is generated and the the GPS
-//!	data is parsed and logged.
+//! data is parsed and logged.
 //!
 //! If the Wake button is pressed, low power mode is disabled.
 //! A reset/power cycle is required to re-enable low power mode after Wake has
@@ -185,14 +185,14 @@ int main(void) {
     //! I/O config and setup
     //*************************************************************************
 
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);	// UART
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART7);	// UART
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);	// UART0
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOC);	// UART7
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);	// SSI
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);	// GPIO
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI2);		// SSI
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOK);	// GPIO
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0); // UART
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART7); // UART
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA); // UART0
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOC); // UART7
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD); // SSI
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION); // GPIO
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI2);  // SSI
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOK); // GPIO
     SysCtlPeripheralEnable(SYSCTL_PERIPH_HIBERNATE);// Hibernation
 
     // UART0 and UART7
@@ -415,7 +415,7 @@ int logToSD(char *inTimestamp, char *inDate, float inLatitude,
             float inLongitude, float inSpeed, float inCourse) {
 
     FRESULT iFResult;   // File function return code
-    UINT 	bw;         // amount of bytes written to SD
+    UINT bw;         // amount of bytes written to SD
     char data[6][30] = {};
     char logOutputString[100] = {};
     uint8_t i = 0;
@@ -535,17 +535,17 @@ int cardDetect(void) {
 //
 //*****************************************************************************
 int gpsData(void) {
-    float	latitude, longitude, speed, course;
-    char	UARTreadChar;
-    char	idBuffer[7] = {};
-    char	sentence[10][20] = {};
-    bool	parsingId = false;
-    bool	readingData = false;
-    bool    readComplete = false;
+    float latitude, longitude, speed, course;
+    char UARTreadChar;
+    char idBuffer[7] = {};
+    char sentence[10][20] = {};
+    bool parsingId = false;
+    bool readingData = false;
+    bool readComplete = false;
 
-    uint32_t	i = 0; 	// Sentence id chars
-    uint32_t	j = 0; 	// NMEA sentence pointer
-    uint32_t	k = 0; 	// NMEA chars
+    uint32_t i = 0; // Sentence id chars
+    uint32_t j = 0; // NMEA sentence pointer
+    uint32_t k = 0; // NMEA chars
 
     while (readComplete != true) {
         if (UARTCharsAvail(UART7_BASE)) {
