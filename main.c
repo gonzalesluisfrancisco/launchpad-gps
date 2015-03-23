@@ -704,4 +704,4 @@ int ppsDataLog(void) {
     logComplete = 0;
 
     return 0;
-}
+} // End function ppsDataLog
