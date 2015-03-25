@@ -1,5 +1,5 @@
 #TM4C1294 Connected LaunchPad GPS Data Logger
-##### TM4C1294NCPDT MCU: 120MHz 32-bit ARM Cortex-M4
+##### TM4C1294NCPDT Microcontroller: 120MHz 32-bit ARM Cortex-M4
 
 [Schematics and PCB Layout](https://upverter.com/mitchg45/cc48ca266b1d3310/GPS-Logger-Boosterpack-80-Pin/)
 
@@ -30,6 +30,6 @@ MicroSD | X6 (J1-42)        | PortD Pin 2  | SSI2       | CS (Chip Select)
 MicroSD | X6 (J3-68)        | PortK Pin 3  | GPIO       | CD (Card Detect)
 
 ##GPS Data Parsing Example
-The Left Terminal is raw NMEA data being read using a Bus Pirate. The right terminal is the parsed data with the coordinates converted to decimal degrees by the TM4C1294 microcontroller.
+The Left terminal is raw NMEA data being read from the GPS module using a Bus Pirate. The right terminal is the parsed data with the coordinates converted to decimal degrees by the TM4C1294 microcontroller.
 
 ![GPS Data parsing example gif](./readme_resources/NMEA_parsing.gif)
