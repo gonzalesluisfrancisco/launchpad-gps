@@ -14,7 +14,7 @@ This project combines the Texas Instruments [TM4C1294 Connected LaunchPad](http:
 
 The unit defaults to Low Power Mode when powered on or reset via the Reset button. This mode logs the aforementioned data once every 10 minutes. Normal Mode can be entered by pressing the Wake button. While in Normal Mode, the data is logged once per second. Additionally, while in Normal Mode the data can be viewed via serial terminal (115200 baud 8-N-1) by connecting to the Debug microUSB.
 
-This project is still under active development including the Schematics and PCB Layout. 
+This project is still under active development including the Schematics and PCB Layout.
 
 ##Pin Connections
 
@@ -28,3 +28,8 @@ MicroSD | X9 (J2-15)        | PortD Pin 1  | SSI2       | MOSI (Master Out - Sla
 MicroSD | X9 (J2-14)        | PortD Pin 0  | SSI2       | MISO (Master In - Slave Out)
 MicroSD | X6 (J1-42)        | PortD Pin 2  | SSI2       | CS (Chip Select)
 MicroSD | X6 (J3-68)        | PortK Pin 3  | GPIO       | CD (Card Detect)
+
+##GPS Data Parsing Example
+The Left Terminal is raw NMEA data being read using a Bus Pirate. The right terminal is the parsed data with the coordinates converted to decimal degrees by the TM4C1294 microcontroller.
+
+![GPS Data parsing example gif](./readme_resources/NMEA_parsing.gif)
